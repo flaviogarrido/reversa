@@ -1,0 +1,5 @@
+interface:
+  display_name: "FG Backlog"
+  short_description: "Backlog de features com prioridade e rastreabilidade"
+policy:
+  allow_implicit_invocation: false
