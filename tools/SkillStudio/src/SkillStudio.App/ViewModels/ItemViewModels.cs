@@ -81,6 +81,7 @@ public sealed class IssueViewModel(ValidationIssue issue)
         SkillField.Body => "Instruções",
         SkillField.Files => Issue.FilePath ?? "Referências",
         SkillField.Tests => "Testes",
+        SkillField.Docs => "Documentação",
         _ => "Pacote",
     };
 }

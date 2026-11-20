@@ -68,5 +68,8 @@ public static class RuleCatalog
         new("RS106", "Testes", "Info", "Casos com o mesmo pedido."),
         new("RS107", "Testes", "Info", "Casos ainda não executados ou resultado desatualizado."),
         new("RS108", "Testes", "Aviso", "Casos que falharam na última execução."),
+        new("RS110", "Documentação", "Info", "Skill com o prefixo do fork sem página em docs/agentes/."),
+        new("RS111", "Documentação", "Aviso", "Página do site faltando em algum idioma (en, pt, es)."),
+        new("RS112", "Documentação", "Aviso", "Página fora do menu do site (nav do mkdocs.yml)."),
     ];
 }

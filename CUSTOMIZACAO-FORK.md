@@ -8,7 +8,7 @@ Guia para incluir skills próprias neste fork (`flaviogarrido/reversa`), testar,
 
 ## 1. Como criar uma skill
 
-> **Atalho:** o [Skill Studio](tools/SkillStudio/README.md) (app WPF em `tools/SkillStudio/`) faz tudo desta seção por você. Ele gera os dois arquivos em lockstep, valida as regras abaixo (61 no total) enquanto você escreve, bloqueia o salvamento com erro e traz um assistente com a API do Claude que entrevista você e busca skills parecidas. A aba **Playground** roda casos de teste da skill contra o Claude e mostra um placar de confiança; os casos ficam em `evals/<skill>/`, fora do pacote. O workflow `skill-studio.yml` aplica a mesma validação no CI.
+> **Atalho:** o [Skill Studio](tools/SkillStudio/README.md) (app WPF em `tools/SkillStudio/`) faz tudo desta seção por você. Ele gera os dois arquivos em lockstep, valida as regras abaixo (64 no total) enquanto você escreve, bloqueia o salvamento com erro e traz um assistente com a API do Claude que entrevista você e busca skills parecidas. A aba **Playground** roda casos de teste da skill contra o Claude e mostra um placar de confiança; os casos ficam em `evals/<skill>/`, fora do pacote. O botão **Documentar** do assistente escreve a página da skill no site (seção *Passos opcionais*). O workflow `skill-studio.yml` aplica a mesma validação no CI.
 
 O instalador copia **toda pasta que existir em `agents/`** para o projeto do usuário. Quem faz isso é `listAllAgents()` em `lib/installer/prompts.js`, que lê o diretório inteiro. Não existe registro manual.
 
@@ -64,7 +64,8 @@ A skill é reprovada se:
 ### Passos opcionais
 
 - **Time no resumo do install:** inclua o ID numa das listas de `lib/installer/prompts.js` (`FORWARD_TEAM`, `DOCS_TEAM` etc.). Isso só muda o resumo exibido pelo instalador. Uma skill fora de qualquer lista aparece como "Discovery Team".
-- **Descoberta:** cite a skill em `agents/reversa-agents-help/SKILL.md` e em `docs/`.
+- **Descoberta:** cite a skill em `agents/reversa-agents-help/SKILL.md`.
+- **Página no site:** crie `docs/agentes/<skill>.md`, `.pt.md` e `.es.md`, inclua a página no grupo *Fork Agents* do nav em `mkdocs.yml` e acrescente uma linha na tabela "Agentes do fork" de `docs/agentes/index*.md`. O Skill Studio faz isso pelo botão **Documentar**, e os testes dele exigem a página completa para toda skill `fg-*`.
 
 ### Use um prefixo próprio
 
@@ -218,6 +219,7 @@ Se as suas skills ficarem em pastas `fg-*` e você mexer pouco em `lib/`, os con
 - [ ] `npm run verify` aprovado (inclui `test-fork-delivery.mjs`)
 - [ ] Instalação testada num projeto descartável
 - [ ] `npm pack --dry-run` lista a skill
+- [ ] Página em `docs/agentes/` nos três idiomas e no menu do site
 - [x] `package.json` com nome com escopo e `update.js` usando o nome do pacote
 - [x] Trusted Publisher configurado no pacote do npm, com *Allow npm publish*
 - [ ] `npm version patch`, `git push` e `git push origin vX.Y.Z` (o workflow publica)

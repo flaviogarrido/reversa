@@ -107,6 +107,7 @@ plugins:
             Pricing and Size Agents: Pricing and Size Agents
             Front-end Team (Impeccable): Time de Front-end (Impeccable)
             Translators N8N->Specs->Python: Tradutores N8N->Specs->Python
+            Fork Agents: Agentes do fork
             Documentation Team: Time de Documentação
             The 4 visual agents: Os 4 agentes visuais
             Bug Agents: Agentes de Bugs
@@ -169,6 +170,7 @@ plugins:
             Pricing and Size Agents: Pricing and Size Agents
             Front-end Team (Impeccable): Equipo de Front-end (Impeccable)
             Translators N8N->Specs->Python: Traductores N8N->Specs->Python
+            Fork Agents: Agentes del fork
             Documentation Team: Equipo de Documentación
             The 4 visual agents: Los 4 agentes visuales
             Bug Agents: Agentes de Bugs
@@ -247,6 +249,8 @@ nav:
       - Overview: refactor/index.md
     - Translators N8N->Specs->Python:
       - N8N Translator: agentes/n8n.md
+    - Fork Agents:
+      - Backlog (fg-backlog): agentes/fg-backlog.md
   - Generated outputs: saidas/index.md
   - Developing from specs: desenvolvendo-com-specs.md
   - Contributing: contribuindo.md

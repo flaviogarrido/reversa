@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SkillStudio.App.Services;
 using SkillStudio.Core.Assistant;
+using SkillStudio.Core.Docs;
 using SkillStudio.Core.Evals;
 using SkillStudio.Core.IO;
 using SkillStudio.Core.Model;
@@ -33,6 +34,7 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost, IEvalH
     private SkillAssistant? _assistant;
     private CancellationTokenSource? _chatCts;
     private EvalStore? _evalStore;
+    private DocsStore? _docsStore;
     private IReadOnlyList<SkillSummary> _summaries = [];
 
     public MainViewModel()
@@ -92,6 +94,7 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost, IEvalH
         {
             _repo = new SkillRepository(root);
             _evalStore = new EvalStore(_repo.Root);
+            _docsStore = new DocsStore(_repo.Root);
             RepositoryPath = _repo.Root;
             _settings.RepositoryPath = _repo.Root;
             _settings.Save();
@@ -295,7 +298,21 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost, IEvalH
     }
 
     private ValidationContext EvalContext(string skillName) =>
-        _context.WithEvals(Playground.ToSuite(skillName), Playground.LastReport);
+        _context.WithEvals(Playground.ToSuite(skillName), Playground.LastReport).WithDocs(DocsStatusOf(skillName));
+
+    /// <summary>Situação das páginas do site; nula quando o repositório não tem o site ou o nome ainda é inválido.</summary>
+    private DocsStatus? DocsStatusOf(string skillName)
+    {
+        if (_docsStore is not { IsAvailable: true } docs || string.IsNullOrWhiteSpace(skillName)) return null;
+        try
+        {
+            return docs.Status(skillName.Trim());
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>Resultado novo do Playground: grava já se a skill está salva e sem alterações; senão, no próximo Salvar.</summary>
     public void OnEvalRunCompleted(EvalReport report)
@@ -621,7 +638,7 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost, IEvalH
             Author = _settings.Author,
         };
         var repo = _repo;
-        _assistant = new SkillAssistant(options, new AssistantTools(repo, () => _index, this, this), Skills.Count);
+        _assistant = new SkillAssistant(options, new AssistantTools(repo, () => _index, this, this, _docsStore, () => OnUi(() => { Revalidate(); return true; })), Skills.Count);
         _assistant.EventRaised += OnAssistantEvent;
         return _assistant;
     }
@@ -656,6 +673,9 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost, IEvalH
     private Task ReviewWithAssistant() => SendToAssistant(
         "Revise o rascunho atual (get_current_draft): corrija os erros de validação, melhore a description e aponte lacunas no corpo. Faça as correções com update_draft e me diga o que mudou.",
         "Revisar o rascunho atual");
+
+    [RelayCommand]
+    private Task DocumentWithAssistant() => SendToAssistant(AssistantPrompts.WriteDocs, "Gerar a página de documentação");
 
     public Task AskAssistant(string prompt, string shown) => SendToAssistant(prompt, shown);
 

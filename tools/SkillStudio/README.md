@@ -46,7 +46,7 @@ O botão **Salvar** fica bloqueado enquanto houver erro.
 
 ## Regras de validação
 
-São 61 regras, em três níveis:
+São 64 regras, em três níveis:
 
 - **Erro**: bloqueia o salvamento.
 - **Aviso**: indica risco ou desvio de convenção.
@@ -60,6 +60,7 @@ A lista completa está na aba **Regras** e em [RuleCatalog.cs](src/SkillStudio.C
 - **Referências (RS053):** todo `references/...` citado no corpo precisa existir. Se o arquivo citado só existe em outra skill, o aviso diz isso.
 - **Corpo:** blocos de código fechados, sem `---` no início, até 500 linhas, sem TODO e sem caminhos absolutos da sua máquina.
 - **Testes (RS100–RS108):** só aparecem no editor, nunca são erro e nunca bloqueiam o salvamento. Avisam quando faltam casos de gatilho negativos, quando um caso de comportamento não tem asserção e quando a última execução está desatualizada ou teve falhas.
+- **Documentação (RS110–RS112):** também só no editor e só para skills com o prefixo do fork. Avisam quando a skill não tem página em `docs/agentes/`, quando falta algum dos três idiomas ou quando a página não está no menu do site.
 - **Segurança:** bloqueia chaves de API, tokens e chaves privadas (RS070). Avisa sobre comandos destrutivos e lembra a política de edição do legado (`.reversa/reversa-config.json`).
 
 As regras foram calibradas contra as 78 skills do upstream: nenhuma delas gera erro.
@@ -72,9 +73,10 @@ O painel da direita conversa com a API do Claude pelo SDK oficial em C# (`Anthro
 - **Busca de referências:** assim que entende o objetivo, ele busca as skills parecidas no repositório e lê as mais próximas para seguir a mesma estrutura e as mesmas convenções. Com a busca web ligada, também traz referências externas, com a fonte.
 - **Preenchimento:** depois que você confirma o resumo, ele preenche o editor pela ferramenta `update_draft`. A resposta da ferramenta traz o resultado da validação, e o assistente corrige os erros antes de encerrar.
 - **Revisar rascunho:** pede uma revisão do que já está no editor.
-- **Nada vai para o disco sem o seu clique em Salvar.**
+- **Documentar:** escreve a página da skill no site de documentação (veja abaixo).
+- **Nada vai para `agents/` sem o seu clique em Salvar.** A exceção é a documentação, que fica fora da skill.
 
-Ferramentas expostas ao modelo: `search_similar_skills`, `read_skill`, `get_current_draft`, `update_draft`, `get_test_cases`, `update_test_cases` e, opcionalmente, `web_search`.
+Ferramentas expostas ao modelo: `search_similar_skills`, `read_skill`, `get_current_draft`, `update_draft`, `get_test_cases`, `update_test_cases`, `get_docs_pages`, `update_docs_pages` e, opcionalmente, `web_search`.
 
 Configuração padrão (em **Configurações**):
 
@@ -114,6 +116,20 @@ O Playground aumenta a confiança numa skill nova antes do commit: você descrev
 
 **Onde ficam:** `evals/<skill>/cases.json` (casos, versionados) e `evals/<skill>/last-run.json` (última execução, com as respostas truncadas). A pasta fica fora de `agents/`, então não vai para os projetos pelo instalador nem para o pacote npm. Os dois arquivos são gravados junto com a skill, no **Salvar**. A suíte de testes do Skill Studio confere que todo `cases.json` é válido e aponta para uma skill que existe.
 
+## Página de documentação
+
+O site do Reversa (`docs/`, publicado com MkDocs) tem uma página por agente em `docs/agentes/`, em três idiomas: `<skill>.md` (inglês, o padrão), `<skill>.pt.md` e `<skill>.es.md`. Skills novas do fork não ganham página sozinhas.
+
+O botão **Documentar** do assistente resolve isso:
+
+1. O assistente lê a skill aberta e uma página existente como modelo (`get_docs_pages`). A skill precisa estar salva, porque a página usa o nome da pasta.
+2. Escreve a página nos três idiomas, no formato das outras: comando e fase, uma analogia, o que faz, o que produz e quando usar. O conteúdo vem só do corpo e das referências da skill.
+3. Grava com `update_docs_pages`. Na primeira vez, também registra a página no menu do `mkdocs.yml` (grupo **Fork Agents**, com as traduções) e acrescenta uma linha na tabela "Agentes do fork" do índice de agentes, nos idiomas em que essa seção existe.
+
+Diferente do rascunho da skill, a documentação vai direto para o disco. Uma página que já existe só é substituída com a sua confirmação. Os arquivos entram no mesmo commit da skill.
+
+A suíte de testes confere que toda skill `fg-*` do repositório tem a página completa e está no menu.
+
 ## Estrutura
 
 ```
@@ -140,7 +156,7 @@ A suíte cobre:
 - O Playground com um modelo falso: gatilho, asserções, linha de base, instabilidade, execução parcial, placar de confiança, persistência em `evals/` e as ferramentas de casos do assistente.
 - Regressão contra todas as skills do repositório: nenhuma pode ter erro, e a maioria é regravada byte a byte.
 
-O workflow [.github/workflows/skill-studio.yml](../../.github/workflows/skill-studio.yml) roda essa suíte a cada mudança em `agents/**` ou `evals/**`. Uma skill com erro reprova o CI mesmo que tenha sido editada fora do app.
+O workflow [.github/workflows/skill-studio.yml](../../.github/workflows/skill-studio.yml) roda essa suíte a cada mudança em `agents/**`, `evals/**`, `docs/agentes/**` ou `mkdocs.yml`. Uma skill com erro reprova o CI mesmo que tenha sido editada fora do app.
 
 Existe também um teste de ponta a ponta contra a API real. Ele só roda se você pedir, porque consome tokens:
 
