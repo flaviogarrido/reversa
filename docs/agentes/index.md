@@ -77,6 +77,16 @@ Use when the legacy "code" is not source code, but a structured artifact like a 
 
 ---
 
+## Fork agents
+
+Skills that exist only in the `@flaviogarrido/reversa` fork. They use the `fg-` prefix and are installed along with the rest of the package.
+
+| Agent | Analogy | When to use |
+|-------|---------|-------------|
+| [Backlog](fg-backlog.md) | The product manager with the spreadsheet | When you want to record and prioritize feature ideas before opening the forward cycle |
+
+---
+
 ## Recommended sequence
 
 ```

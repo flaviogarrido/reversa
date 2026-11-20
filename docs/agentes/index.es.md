@@ -71,6 +71,16 @@ Use cuando el "código" heredado no sea código fuente, sino un artefacto estruc
 
 ---
 
+## Agentes del fork
+
+Skills que solo existen en el fork `@flaviogarrido/reversa`. Usan el prefijo `fg-` y se instalan junto con el resto del paquete.
+
+| Agente | Analogía | Cuándo usar |
+|--------|----------|-------------|
+| [Backlog](fg-backlog.md) | El gerente de producto con la planilla | Cuando quieras registrar y priorizar ideas de feature antes de abrir el ciclo forward |
+
+---
+
 ## Secuencia recomendada
 
 ```
