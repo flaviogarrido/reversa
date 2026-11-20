@@ -2,7 +2,7 @@
 
 Guia para incluir skills próprias neste fork (`flaviogarrido/reversa`), testar, entregar aos projetos e continuar acompanhando o upstream (`sandeco/reversa`).
 
-> **Resumo:** criar uma skill é só uma pasta em `agents/`. O cuidado está na **entrega**: do jeito que está, o fork instala e atualiza a partir do pacote `reversa` original do npm, não a partir deste repositório.
+> **Resumo:** criar uma skill é só uma pasta em `agents/`. O fork é entregue pelo pacote `@flaviogarrido/reversa` no npm (seção 3), e não pelo `reversa` original.
 
 ---
 
@@ -72,7 +72,7 @@ Use `fg-` (ou outro prefixo seu) em vez de `reversa-`. Isso traz três vantagens
 
 1. **Não gera conflito de merge** com o upstream, porque suas pastas nunca existem lá.
 2. **Deixa claro** o que é do fork e o que é original.
-3. **Evita um bug conhecido do `update`.** Em `lib/commands/update.js`, a checagem "arquivo modificado pelo usuário" usa `startsWith(relDir)` sem a `/` final. Por isso, editar qualquer arquivo de uma skill `reversa-xyz` instalada bloqueia a atualização da skill `reversa` (o orquestrador). A correção é comparar com `relDir + '/'`.
+3. **Não depende do conserto do `update`.** No upstream, a checagem "arquivo modificado pelo usuário" de `lib/commands/update.js` usa `startsWith(relDir)` sem a `/` final, e editar uma skill `reversa-xyz` bloqueia a atualização da `reversa`. O fork já corrige isso (seção 3), mas quem instalar pelo pacote original continua com o bug.
 
 ---
 
@@ -102,32 +102,59 @@ O workflow `.github/workflows/verify-invocation.yml` roda o mesmo verificador no
 
 ---
 
-## 3. Entrega: o problema do fork
+## 3. Entrega: pacote do fork no npm
 
-Do jeito que está hoje:
+O fork é publicado como **`@flaviogarrido/reversa`**. O comando continua sendo `reversa`; muda só o que você digita no `npx`:
 
-- `npx reversa install` baixa o pacote **original** do npm, sem as suas skills.
-- `lib/commands/update.js` compara a versão instalada com o `latest` do pacote **`reversa`** no npm (`fetchLatestVersion('reversa')`). Se a versão do seu fork for igual ou maior que a do upstream, o update responde *"already on the latest version"* e **não atualiza nada**.
+```bash
+npx @flaviogarrido/reversa install
+```
 
-### Recomendado: publicar com escopo no npm
+```bash
+npx @flaviogarrido/reversa update
+```
 
-1. Em `package.json`, mude `"name"` para `"@flaviogarrido/reversa"`. O comando (`"bin": { "reversa": ... }`) pode continuar o mesmo.
-2. Em `lib/commands/update.js`, troque o literal `'reversa'` em `fetchLatestVersion('reversa')` pelo nome lido do `package.json` (`pkg.name`).
-3. Publique:
+### O que foi ajustado para o fork funcionar
 
-   ```bash
-   npm publish --access public
-   ```
+- `package.json`: nome com escopo, `publishConfig.access = public` e links apontando para este repositório.
+- `lib/utils/package-info.js`: lê nome e versão do pacote. Tudo que fala com o npm ou sugere comandos ao usuário usa esse nome, e não o literal `reversa`.
+- `lib/commands/update.js`:
+  - consulta o `latest` do **próprio** pacote no npm;
+  - grava no projeto a versão do pacote **em execução**, mesmo offline (antes gravava a do npm, e offline não gravava nada);
+  - registra a origem em `.reversa/state.json` (`"package"`). Um projeto instalado pelo `reversa` original é sempre atualizado pelo fork, mesmo que a versão instalada pareça maior ou igual, porque as numerações não são comparáveis;
+  - compara pastas de skill com a `/` final. Antes, editar `reversa-docs/` bloqueava a atualização de `reversa/`.
+- `scripts/test-fork-delivery.mjs`: testa tudo isso num projeto temporário que simula uma instalação do upstream. Faz parte do `npm run verify`.
 
-4. Os projetos passam a usar:
+### Migrar um projeto que usa o Reversa original
 
-   ```bash
-   npx @flaviogarrido/reversa install
-   ```
+Na raiz do projeto, rode o update pelo pacote do fork:
 
-   ```bash
-   npx @flaviogarrido/reversa update
-   ```
+```bash
+npx @flaviogarrido/reversa update
+```
+
+Os arquivos que você editou são preservados (manifesto SHA-256 em `.reversa/_config/files-manifest.json`). As skills novas do fork, como a `fg-backlog`, são instaladas, e `.reversa/state.json` passa a registrar `"package": "@flaviogarrido/reversa"`.
+
+### Publicar uma versão
+
+A publicação é feita pelo workflow `.github/workflows/publish.yml`, disparado por tag. Ele confere se a tag bate com o `package.json`, roda os gates (`npm run verify` e os testes do Skill Studio), mostra o conteúdo do pacote e publica com proveniência.
+
+**Configuração (uma vez só):**
+
+1. No npmjs.com, crie a conta ou organização dona do escopo `@flaviogarrido` e gere um token do tipo *Automation*.
+2. No GitHub do fork, em *Settings → Secrets and variables → Actions*, crie o segredo `NPM_TOKEN` com esse token.
+
+**A cada release:**
+
+```bash
+npm version patch
+```
+
+```bash
+git push --follow-tags
+```
+
+O `npm version` sobe a versão, faz o commit e cria a tag `vX.Y.Z`. O push da tag dispara a publicação.
 
 ### Alternativa: instalar direto do GitHub (sem npm)
 
@@ -135,20 +162,7 @@ Do jeito que está hoje:
 npx github:flaviogarrido/reversa#v1.3.7 install
 ```
 
-Fixe uma tag (`#vX.Y.Z`) para ter builds reproduzíveis. Mesmo assim, a verificação de versão do `update` continua consultando o pacote errado no npm, então o passo 2 acima também vale aqui.
-
-### O que o update garante
-
-- Ele preserva arquivos editados pelo usuário: um manifesto SHA-256 fica em `.reversa/_config/files-manifest.json`.
-- Ele instala automaticamente skills novas do pacote, porque `update` reinstala tudo o que existe em `agents/`.
-- Ele acrescenta a política de edição do legado aos arquivos de entrada (`CLAUDE.md`, `AGENTS.md` etc.) sem apagar o que o usuário escreveu.
-
-### Rotina de release
-
-1. Suba a versão: `npm version patch` (ou `minor`).
-2. Rode as verificações da seção 2.
-3. Faça push com a tag: `git push --follow-tags`.
-4. `npm publish` (se usar o npm).
+Fixe uma tag (`#vX.Y.Z`) para ter builds reproduzíveis. Nesse modo o `update` não encontra o pacote no npm, segue offline e instala a versão da tag usada.
 
 ---
 
@@ -188,9 +202,10 @@ Se as suas skills ficarem em pastas `fg-*` e você mexer pouco em `lib/`, os con
 
 - [ ] Skill em `agents/fg-<nome>/` com `SKILL.md` e `agents/openai.yaml` em lockstep
 - [ ] `description` sem frases-gatilho (se for *user-invoked*)
-- [ ] `verify-invocation.py` e `test-installer-transport.mjs` aprovados
+- [ ] `npm run verify` aprovado (inclui `test-fork-delivery.mjs`)
 - [ ] Instalação testada num projeto descartável
 - [ ] `npm pack --dry-run` lista a skill
-- [ ] `package.json` com nome com escopo e `update.js` usando `pkg.name`
-- [ ] Versão incrementada, tag criada, pacote publicado
+- [x] `package.json` com nome com escopo e `update.js` usando o nome do pacote
+- [ ] Segredo `NPM_TOKEN` configurado no GitHub do fork
+- [ ] `npm version patch` e `git push --follow-tags` (o workflow publica)
 - [ ] Remoto `upstream` configurado e sincronizado periodicamente

@@ -1,0 +1,69 @@
+name: Publish to npm
+
+# Publica o fork no npm (@flaviogarrido/reversa) quando uma tag vX.Y.Z é enviada.
+# Antes de publicar, roda os mesmos gates do CI. Requer o segredo NPM_TOKEN
+# (token "Automation" do npmjs.com com permissão de publicação no escopo).
+#
+#   npm version patch        # sobe a versão e cria a tag
+#   git push --follow-tags   # dispara este workflow
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # proveniência do pacote (npm publish --provenance)
+
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Conferir nome do pacote e tag
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Pacote: $NAME@$VERSION"
+          if [ "$NAME" = "reversa" ]; then
+            echo "::error::package.json ainda usa o nome do upstream; o fork publica com escopo."
+            exit 1
+          fi
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "v$VERSION" ]; then
+            echo "::error::A tag ${GITHUB_REF_NAME} não bate com a versão v$VERSION do package.json."
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - name: Gates do CI
+        run: |
+          npm run verify
+          dotnet test tools/SkillStudio/tests/SkillStudio.Tests
+
+      - name: Conferir conteúdo do pacote
+        run: npm pack --dry-run
+
+      - name: Publicar
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
