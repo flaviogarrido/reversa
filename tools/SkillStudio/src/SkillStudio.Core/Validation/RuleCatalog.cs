@@ -1,0 +1,63 @@
+namespace SkillStudio.Core.Validation;
+
+public sealed record RuleInfo(string Id, string Category, string Severity, string Description);
+
+/// <summary>Catálogo legível das regras, exibido na aba "Regras" e documentado no README.</summary>
+public static class RuleCatalog
+{
+    public static IReadOnlyList<RuleInfo> All { get; } =
+    [
+        new("RS001", "Nome", "Erro", "Nome obrigatório."),
+        new("RS002", "Nome", "Erro", "kebab-case: minúsculas, números e hífens, sem hífen no início/fim ou duplicado."),
+        new("RS003", "Nome", "Erro", "Até 64 caracteres (padrão Agent Skills)."),
+        new("RS004", "Nome", "Erro", "Não pode repetir uma pasta existente em agents/."),
+        new("RS005", "Nome", "Aviso", "Não pode ser prefixo de outra skill nem ter outra como prefixo (bug do reversa update)."),
+        new("RS006", "Nome", "Aviso", "Skill nova não deve usar o prefixo reversa- do upstream."),
+        new("RS007", "Nome", "Erro", "Não pode conter as palavras reservadas anthropic ou claude."),
+        new("RS008", "Nome", "Info", "Sugere o prefixo configurado para o fork."),
+        new("RS009", "Nome", "Aviso", "Renomear cria pasta nova; a antiga permanece."),
+        new("RS010", "Description", "Erro", "Description obrigatória."),
+        new("RS011", "Description", "Erro/Aviso", "Até 1024 caracteres (erro); acima de 600 gera aviso."),
+        new("RS012", "Description", "Aviso", "Pelo menos 40 caracteres."),
+        new("RS013", "Description", "Erro", "User-invoked sem gatilhos de modelo (digitar \", Use com \", Ative com , pedir \"). Mesma regra do CI."),
+        new("RS014", "Description", "Aviso", "Sem tags XML/HTML (a API de Skills recusa)."),
+        new("RS015", "Description", "Aviso", "Model-invoked precisa dizer quando usar."),
+        new("RS016", "Description", "Info", "Quebras de linha viram espaços."),
+        new("RS017", "Description", "Info", "Não começar repetindo o nome."),
+        new("RS020", "Invocação", "Aviso", "SKILL.md e openai.yaml discordavam no disco; serão alinhados."),
+        new("RS021", "Codex", "Info", "display_name vazio é gerado a partir do nome."),
+        new("RS022", "Codex", "Aviso", "display_name até 40 caracteres."),
+        new("RS023", "Codex", "Info", "short_description vazio é gerado a partir da description."),
+        new("RS024", "Codex", "Aviso", "short_description até 90 caracteres."),
+        new("RS040", "Metadata", "Aviso", "author preenchido."),
+        new("RS041", "Metadata", "Erro", "version em SemVer."),
+        new("RS042", "Metadata", "Aviso", "framework = reversa."),
+        new("RS043", "Metadata", "Aviso", "license preenchida."),
+        new("RS044", "Metadata", "Erro", "compatibility até 500 caracteres."),
+        new("RS045", "Metadata", "Info", "team entre os times conhecidos."),
+        new("RS046", "Metadata", "Erro", "Valores de metadata sem quebra de linha."),
+        new("RS047", "Metadata", "Erro", "Chaves extras de frontmatter válidas."),
+        new("RS050", "Corpo", "Erro/Aviso", "Corpo obrigatório; abaixo de 300 caracteres gera aviso."),
+        new("RS051", "Corpo", "Aviso", "Até 500 linhas; o excesso vai para references/."),
+        new("RS052", "Corpo", "Erro", "Não pode começar com --- (segundo frontmatter)."),
+        new("RS053", "Corpo", "Erro", "Todo references/, scripts/ ou assets/ citado precisa existir."),
+        new("RS054", "Arquivos", "Info", "Arquivo em references/ que ninguém cita."),
+        new("RS055", "Corpo", "Aviso", "Sem TODO, TBD, FIXME ou lorem ipsum."),
+        new("RS056", "Corpo", "Aviso", "Sem caminhos absolutos da sua máquina."),
+        new("RS058", "Corpo", "Info", "Usar títulos (##) para estruturar."),
+        new("RS059", "Corpo", "Erro", "Blocos de código fechados."),
+        new("RS060", "Arquivos", "Erro", "Caminho relativo válido, sem .. nem caracteres especiais."),
+        new("RS061", "Arquivos", "Erro", "SKILL.md e agents/openai.yaml são gerados, não auxiliares."),
+        new("RS062", "Arquivos", "Aviso", "Arquivos em references/, scripts/ ou assets/."),
+        new("RS063", "Arquivos", "Aviso/Info", "Sem espaços no nome; no máximo dois níveis de pasta."),
+        new("RS064", "Arquivos", "Erro", "Sem caminhos duplicados (ignorando maiúsculas)."),
+        new("RS065", "Arquivos", "Aviso", "Sem arquivos vazios."),
+        new("RS066", "Arquivos", "Info", "Launchers sem extensão em scripts/."),
+        new("RS070", "Segurança", "Erro", "Sem chaves de API, tokens ou chaves privadas."),
+        new("RS071", "Segurança", "Aviso", "Sem comandos destrutivos (rm -rf, git reset --hard...)."),
+        new("RS072", "Segurança", "Info", "Quem altera código deve citar a política de edição do legado."),
+        new("RS090", "Pacote", "Erro", "Porte de verify-invocation.py aplicado aos arquivos gerados (lockstep, display_name, short_description)."),
+        new("RS091", "Pacote", "Erro", "Ida e volta pelo YAML preserva nome, description e invocação."),
+        new("RS092", "Pacote", "Aviso", "Skill até 512 KB de texto."),
+    ];
+}

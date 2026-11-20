@@ -1,0 +1,500 @@
+<ui:FluentWindow x:Class="SkillStudio.App.Views.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:ae="http://icsharpcode.net/sharpdevelop/avalonedit"
+                 xmlns:b="clr-namespace:SkillStudio.App.Behaviors"
+                 xmlns:vm="clr-namespace:SkillStudio.App.ViewModels"
+                 mc:Ignorable="d"
+                 d:DataContext="{d:DesignInstance vm:MainViewModel}"
+                 Title="Reversa Skill Studio"
+                 Width="1560" Height="940" MinWidth="1180" MinHeight="680"
+                 WindowStartupLocation="CenterScreen"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round">
+
+    <ui:FluentWindow.InputBindings>
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}" />
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewSkillCommand}" />
+    </ui:FluentWindow.InputBindings>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Reversa Skill Studio">
+            <ui:TitleBar.Icon>
+                <ui:SymbolIcon Symbol="BrainCircuit24" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <!-- Barra de comandos -->
+        <Border Grid.Row="1" Padding="16,6,16,10">
+            <DockPanel LastChildFill="False">
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                    <ui:Button Content="Nova skill" Icon="{ui:SymbolIcon Add24}" Command="{Binding NewSkillCommand}" ToolTip="Ctrl+N" />
+                    <ui:Button Margin="8,0,0,0" Appearance="Primary" Icon="{ui:SymbolIcon Save24}" Command="{Binding SaveCommand}"
+                               IsEnabled="{Binding CanSave}" ToolTip="Ctrl+S · bloqueado enquanto houver erros">
+                        <TextBlock>
+                            <Run Text="Salvar" /><Run Text="{Binding IsDirty, Mode=OneWay, Converter={x:Static vm:Markers.Dirty}}" />
+                        </TextBlock>
+                    </ui:Button>
+                    <ui:Button Margin="8,0,0,0" Content="Verificar repositório" Icon="{ui:SymbolIcon ShieldCheckmark24}"
+                               Command="{Binding VerifyRepositoryCommand}" ToolTip="Roda verify-invocation.py e test-installer-transport.mjs, os mesmos gates do CI" />
+                    <ui:Button Margin="8,0,0,0" Content="Abrir pasta" Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding OpenSkillFolderCommand}" />
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <TextBlock VerticalAlignment="Center" Margin="0,0,12,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding RepositoryStatus}" />
+                    <ui:Button Content="Repositório" Icon="{ui:SymbolIcon FolderLink24}" Command="{Binding ChooseRepositoryCommand}" />
+                    <ui:Button Margin="8,0,0,0" Content="Configurações" Icon="{ui:SymbolIcon Settings24}" Click="OnSettingsClick" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="16,0,16,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="290" MinWidth="220" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" MinWidth="520" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="400" MinWidth="320" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ============ Coluna 1: skills do repositório ============ -->
+            <ui:Card Grid.Column="0" Padding="12" VerticalAlignment="Stretch" VerticalContentAlignment="Stretch">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" FontSize="16" FontWeight="SemiBold" Text="Skills" />
+                    <ui:TextBox DockPanel.Dock="Top" Margin="0,10,0,6" PlaceholderText="Filtrar por nome, time ou texto"
+                                Icon="{ui:SymbolIcon Search24}" Text="{Binding SkillFilter, UpdateSourceTrigger=PropertyChanged}" />
+                    <CheckBox DockPanel.Dock="Top" Margin="0,0,0,8" Content="Só as do meu fork" IsChecked="{Binding ShowOnlyFork}" />
+                    <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Hint}" Margin="0,8,0,0"
+                               Text="Duplo clique abre · botão direito para usar como modelo" />
+                    <ListBox ItemsSource="{Binding SkillsView}" SelectedItem="{Binding SelectedSkill}" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="OnSkillDoubleClick">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:SkillListItem}">
+                                <StackPanel Margin="0,4">
+                                    <StackPanel.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Abrir para editar"
+                                                      Command="{Binding PlacementTarget.Tag.OpenSkillCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding}" />
+                                            <MenuItem Header="Usar como modelo para skill nova"
+                                                      Command="{Binding PlacementTarget.Tag.UseAsTemplateCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding}" />
+                                        </ContextMenu>
+                                    </StackPanel.ContextMenu>
+                                    <StackPanel.Tag>
+                                        <Binding Path="DataContext" RelativeSource="{RelativeSource AncestorType=ListBox}" />
+                                    </StackPanel.Tag>
+                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Description}"
+                                               TextTrimming="CharacterEllipsis" MaxHeight="34" TextWrapping="Wrap" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <Border Style="{StaticResource Pill}"><TextBlock FontSize="11" Text="{Binding InvocationLabel}" /></Border>
+                                        <Border Style="{StaticResource Pill}"><TextBlock FontSize="11" Text="{Binding Origin}" /></Border>
+                                        <Border Style="{StaticResource Pill}" Visibility="{Binding Team, Converter={StaticResource BoolToVisibility}}">
+                                            <TextBlock FontSize="11" Text="{Binding Team}" />
+                                        </Border>
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </ui:Card>
+
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+            <!-- ============ Coluna 2: editor ============ -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="6" />
+                    <RowDefinition Height="220" MinHeight="90" />
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Margin="4,0,4,8">
+                    <ui:SymbolIcon DockPanel.Dock="Left" Symbol="DocumentEdit24" FontSize="22" Margin="0,0,8,0" />
+                    <TextBlock DockPanel.Dock="Left" FontSize="20" FontWeight="SemiBold" Text="{Binding EditorTitle}" VerticalAlignment="Center" />
+                    <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" HorizontalAlignment="Right" FontWeight="SemiBold"
+                               Text="{Binding ValidationSummary}" />
+                </DockPanel>
+
+                <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}">
+                    <!-- Identidade -->
+                    <TabItem>
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Tag24" Margin="0,0,6,0" /><TextBlock Text="Identidade" /></StackPanel>
+                        </TabItem.Header>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,0,12,12">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="NOME (pasta em agents/ e comando /nome)" />
+                                <DockPanel>
+                                    <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Normalizar" Command="{Binding ApplySuggestedNameCommand}"
+                                               ToolTip="Converte para kebab-case sem acentos" />
+                                    <ui:TextBox PlaceholderText="fg-minha-skill" FontFamily="Cascadia Mono, Consolas"
+                                                Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource Hint}">
+                                    <Run Text="kebab-case, até 64 caracteres, com o prefixo do fork. Sugestão:" /> <Run FontWeight="SemiBold" Text="{Binding SuggestedName, Mode=OneWay}" />
+                                </TextBlock>
+
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="QUEM ACIONA A SKILL" />
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton GroupName="inv" Content="Usuário (/comando)" IsChecked="{Binding IsUserInvoked}" Margin="0,0,16,0" />
+                                    <RadioButton GroupName="inv" Content="Modelo (aciona sozinho)" IsChecked="{Binding IsUserInvoked, Converter={x:Static vm:Markers.Not}}" />
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource Hint}"
+                                           Text="Usuário grava disable-model-invocation: true no SKILL.md e allow_implicit_invocation: false no openai.yaml, sempre juntos. Prefira essa opção: skills de usuário não ocupam contexto em toda sessão." />
+
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="DESCRIPTION" />
+                                <ui:TextBox AcceptsReturn="True" TextWrapping="Wrap" MinHeight="96" VerticalContentAlignment="Top"
+                                            PlaceholderText="O que a skill faz e em que momento do fluxo ela entra."
+                                            Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{StaticResource Hint}">
+                                    <Run Text="{Binding DescriptionLength, Mode=OneWay}" /><Run Text=" / 1024 caracteres. Skills de usuário: resumo humano, sem frases de ativação. Skills de modelo: diga quando usar." />
+                                </TextBlock>
+
+                                <Grid Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <DockPanel Margin="0,14,0,6">
+                                            <CheckBox DockPanel.Dock="Right" Content="automático" IsChecked="{Binding AutoDisplayName}" />
+                                            <TextBlock Style="{StaticResource SectionLabel}" Margin="0" VerticalAlignment="Center" Text="DISPLAY NAME (Codex)" />
+                                        </DockPanel>
+                                        <ui:TextBox Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding AutoDisplayName, Converter={x:Static vm:Markers.Not}}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <DockPanel Margin="0,14,0,6">
+                                            <CheckBox DockPanel.Dock="Right" Content="automático" IsChecked="{Binding AutoShortDescription}" />
+                                            <TextBlock Style="{StaticResource SectionLabel}" Margin="0" VerticalAlignment="Center" Text="SHORT DESCRIPTION (Codex)" />
+                                        </DockPanel>
+                                        <ui:TextBox Text="{Binding ShortDescription, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding AutoShortDescription, Converter={x:Static vm:Markers.Not}}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="SKILLS PARECIDAS NO REPOSITÓRIO" />
+                                <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,6"
+                                           Text="Atualiza conforme você escreve o nome e a description. Botão direito na lista à esquerda para usar uma delas como modelo." />
+                                <ItemsControl ItemsSource="{Binding SimilarSkills}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <ui:Card Margin="0,0,0,6" Padding="10">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock DockPanel.Dock="Right" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                                   Text="{Binding Score, StringFormat=similaridade {0:0.00}}" />
+                                                        <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                                    </DockPanel>
+                                                    <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Description}" />
+                                                </StackPanel>
+                                            </ui:Card>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <!-- Instruções -->
+                    <TabItem>
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="TextBulletListSquare24" Margin="0,0,6,0" /><TextBlock Text="Instruções" /></StackPanel>
+                        </TabItem.Header>
+                        <DockPanel Margin="0,8,0,0">
+                            <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Hint}">
+                                <Run Text="{Binding BodyLineCount, Mode=OneWay}" /><Run Text=" linhas (recomendado até 500). Markdown sem frontmatter: o editor gera o cabeçalho. Cite arquivos auxiliares pelo caminho exato, ex.: references/checklist.md." />
+                            </TextBlock>
+                            <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
+                                <ae:TextEditor x:Name="BodyEditor" FontFamily="Cascadia Mono, Consolas" FontSize="13" ShowLineNumbers="True"
+                                               WordWrap="True" Padding="6" Background="Transparent"
+                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               b:AvalonEditBinding.Syntax="MarkDown"
+                                               b:AvalonEditBinding.Text="{Binding Body, Mode=TwoWay}" />
+                            </Border>
+                        </DockPanel>
+                    </TabItem>
+
+                    <!-- Referências -->
+                    <TabItem>
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="DocumentMultiple24" Margin="0,0,6,0" /><TextBlock Text="Referências" /></StackPanel>
+                        </TabItem.Header>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="260" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <DockPanel Grid.Column="0">
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                                    <ui:Button Content="Adicionar" Icon="{ui:SymbolIcon DocumentAdd24}" Command="{Binding AddFileCommand}" />
+                                    <ui:Button Margin="6,0,0,0" Icon="{ui:SymbolIcon Delete24}" Command="{Binding RemoveFileCommand}" ToolTip="Remover arquivo selecionado" />
+                                    <ui:Button Margin="6,0,0,0" Icon="{ui:SymbolIcon LinkAdd24}" Command="{Binding InsertFileReferenceCommand}" ToolTip="Citar o arquivo no corpo" />
+                                </StackPanel>
+                                <ListBox ItemsSource="{Binding Files}" SelectedItem="{Binding SelectedFile}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:FileItemViewModel}">
+                                            <StackPanel>
+                                                <TextBlock FontFamily="Cascadia Mono, Consolas" FontSize="12" Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Kind}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                            <DockPanel Grid.Column="2" DataContext="{Binding SelectedFile}"
+                                       Visibility="{Binding Converter={StaticResource NullToVisibility}}">
+                                <ui:TextBox DockPanel.Dock="Top" Margin="0,0,0,8" FontFamily="Cascadia Mono, Consolas" PlaceholderText="references/arquivo.md"
+                                            Text="{Binding RelativePath, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding IsBinary, Converter={x:Static vm:Markers.Not}}" />
+                                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Hint}" Margin="0,0,0,6"
+                                           Visibility="{Binding IsBinary, Converter={StaticResource BoolToVisibility}}"
+                                           Text="Arquivo binário: o editor preserva sem alterar." />
+                                <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
+                                    <ae:TextEditor FontFamily="Cascadia Mono, Consolas" FontSize="13" ShowLineNumbers="True" WordWrap="True" Padding="6"
+                                                   Background="Transparent" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   IsReadOnly="{Binding IsBinary}"
+                                                   b:AvalonEditBinding.Syntax="MarkDown"
+                                                   b:AvalonEditBinding.Text="{Binding Content, Mode=TwoWay}" />
+                                </Border>
+                            </DockPanel>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- Metadados -->
+                    <TabItem>
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="DataUsage24" Margin="0,0,6,0" /><TextBlock Text="Metadados" /></StackPanel>
+                        </TabItem.Header>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="4,0,12,12">
+                            <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="16" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Style="{StaticResource SectionLabel}" Text="AUTOR" />
+                                    <ui:TextBox Text="{Binding Author, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Style="{StaticResource SectionLabel}" Text="VERSÃO (SemVer)" />
+                                    <ui:TextBox Text="{Binding Version, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="1.0.0" />
+                                    <TextBlock Style="{StaticResource SectionLabel}" Text="FRAMEWORK" />
+                                    <ui:TextBox Text="{Binding Framework, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Style="{StaticResource SectionLabel}" Text="LICENÇA" />
+                                    <ui:TextBox Text="{Binding License, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Style="{StaticResource SectionLabel}" Text="TIME" />
+                                    <ComboBox IsEditable="True" ItemsSource="{Binding TeamSuggestions}" Text="{Binding Team, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Style="{StaticResource SectionLabel}" Text="FASE" />
+                                    <ComboBox IsEditable="True" ItemsSource="{Binding PhaseSuggestions}" Text="{Binding Phase, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Style="{StaticResource SectionLabel}" Text="PAPEL" />
+                                    <ComboBox IsEditable="True" ItemsSource="{Binding RoleSuggestions}" Text="{Binding Role, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Style="{StaticResource SectionLabel}" Text="ETAPA (stage)" />
+                                    <ui:TextBox Text="{Binding Stage, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+                            </Grid>
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="COMPATIBILIDADE" />
+                                <ui:TextBox AcceptsReturn="False" TextWrapping="Wrap" Text="{Binding Compatibility, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Style="{StaticResource Hint}" Text="Time e fase organizam a skill no resumo do instalador e na documentação. Times fora da lista exigem ajuste em lib/installer/prompts.js." />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <!-- Pré-visualização -->
+                    <TabItem>
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Eye24" Margin="0,0,6,0" /><TextBlock Text="Arquivos gerados" /></StackPanel>
+                        </TabItem.Header>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="2*" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="90" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Style="{StaticResource SectionLabel}" Margin="0,0,0,6" Text="SKILL.md" />
+                            <Border Grid.Row="1" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
+                                <ae:TextEditor IsReadOnly="True" FontFamily="Cascadia Mono, Consolas" FontSize="12" ShowLineNumbers="True" Padding="6"
+                                               Background="Transparent" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               b:AvalonEditBinding.Syntax="MarkDown"
+                                               b:AvalonEditBinding.Text="{Binding PreviewSkillMd, Mode=OneWay}" />
+                            </Border>
+                            <TextBlock Grid.Row="2" Style="{StaticResource SectionLabel}" Text="agents/openai.yaml" />
+                            <Border Grid.Row="3" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
+                                <ae:TextEditor IsReadOnly="True" FontFamily="Cascadia Mono, Consolas" FontSize="12" Padding="6"
+                                               Background="Transparent" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               b:AvalonEditBinding.Text="{Binding PreviewOpenAiYaml, Mode=OneWay}" />
+                            </Border>
+                            <DockPanel Grid.Row="4" Margin="0,14,0,6">
+                                <ui:ProgressRing DockPanel.Dock="Right" IsIndeterminate="True" Width="18" Height="18"
+                                                 Visibility="{Binding IsVerifying, Converter={StaticResource BoolToVisibility}}" />
+                                <TextBlock Style="{StaticResource SectionLabel}" Margin="0" Text="VERIFICAÇÃO DO REPOSITÓRIO (gates do CI)" />
+                            </DockPanel>
+                            <ui:TextBox Grid.Row="5" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" AcceptsReturn="True"
+                                        FontFamily="Cascadia Mono, Consolas" FontSize="12" VerticalContentAlignment="Top"
+                                        PlaceholderText="Salve a skill e clique em Verificar repositório."
+                                        Text="{Binding VerifyOutput, Mode=OneWay}" />
+                        </Grid>
+                    </TabItem>
+
+                    <!-- Regras -->
+                    <TabItem>
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="ClipboardTaskListLtr24" Margin="0,0,6,0" /><TextBlock Text="Regras" /></StackPanel>
+                        </TabItem.Header>
+                        <DataGrid Margin="0,8,0,0" ItemsSource="{Binding Rules}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Regra" Binding="{Binding Id}" Width="70" />
+                                <DataGridTextColumn Header="Área" Binding="{Binding Category}" Width="100" />
+                                <DataGridTextColumn Header="Nível" Binding="{Binding Severity}" Width="90" />
+                                <DataGridTextColumn Header="O que verifica" Binding="{Binding Description}" Width="*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+                </TabControl>
+
+                <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+                <!-- Painel de validação -->
+                <ui:Card Grid.Row="3" Padding="10" VerticalAlignment="Stretch" VerticalContentAlignment="Stretch">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="2,0,0,8">
+                            <TextBlock FontWeight="SemiBold" Text="Validação" Margin="0,0,12,0" />
+                            <ui:SymbolIcon Symbol="ErrorCircle24" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+                            <TextBlock Margin="4,0,12,0" Text="{Binding ErrorCount, StringFormat={}{0} erros}" />
+                            <ui:SymbolIcon Symbol="Warning24" Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                            <TextBlock Margin="4,0,12,0" Text="{Binding WarningCount, StringFormat={}{0} avisos}" />
+                            <ui:SymbolIcon Symbol="Info24" />
+                            <TextBlock Margin="4,0,0,0" Text="{Binding InfoCount, StringFormat={}{0} sugestões}" />
+                        </StackPanel>
+                        <ListBox x:Name="IssueList" ItemsSource="{Binding Issues}" BorderThickness="0" MouseDoubleClick="OnIssueDoubleClick"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:IssueViewModel}">
+                                    <DockPanel Margin="0,2">
+                                        <ui:SymbolIcon DockPanel.Dock="Left" VerticalAlignment="Top" Margin="0,1,8,0"
+                                                       Symbol="{Binding Severity, Converter={StaticResource SeverityToSymbol}}"
+                                                       Foreground="{Binding Severity, Converter={StaticResource SeverityToBrush}}" />
+                                        <StackPanel>
+                                            <TextBlock TextWrapping="Wrap">
+                                                <Run FontFamily="Cascadia Mono, Consolas" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding RuleId, Mode=OneWay}" />
+                                                <Run FontWeight="SemiBold" Text="{Binding FieldLabel, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding Message, Mode=OneWay}" />
+                                            </TextBlock>
+                                            <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{Binding Suggestion}" Visibility="{Binding Suggestion, Converter={StaticResource NullToVisibility}}" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </ui:Card>
+            </Grid>
+
+            <GridSplitter Grid.Column="3" Width="6" HorizontalAlignment="Stretch" Background="Transparent" />
+
+            <!-- ============ Coluna 3: assistente ============ -->
+            <ui:Card Grid.Column="4" Padding="12" VerticalAlignment="Stretch" VerticalContentAlignment="Stretch">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top">
+                        <ui:Button DockPanel.Dock="Right" Icon="{ui:SymbolIcon ArrowReset24}" Command="{Binding ResetChatCommand}" ToolTip="Nova conversa" />
+                        <ui:SymbolIcon DockPanel.Dock="Left" Symbol="Sparkle24" FontSize="20" Margin="0,0,8,0" />
+                        <StackPanel>
+                            <TextBlock FontSize="16" FontWeight="SemiBold" Text="Assistente Claude" />
+                            <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding CredentialSource, StringFormat=Credencial: {0}}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DockPanel>
+
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,10,0,8">
+                        <ui:Button Appearance="Primary" Content="Iniciar entrevista" Icon="{ui:SymbolIcon ChatSparkle24}" Command="{Binding StartInterviewCommand}" />
+                        <ui:Button Margin="6,0,0,0" Content="Revisar rascunho" Icon="{ui:SymbolIcon CheckmarkStarburst24}" Command="{Binding ReviewWithAssistantCommand}" />
+                    </StackPanel>
+
+                    <!-- Entrada -->
+                    <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <DockPanel Margin="0,0,0,6" Visibility="{Binding IsAssistantBusy, Converter={StaticResource BoolToVisibility}}">
+                            <ui:Button DockPanel.Dock="Right" Content="Cancelar" Command="{Binding CancelChatCommand}" />
+                            <ui:ProgressRing DockPanel.Dock="Left" IsIndeterminate="True" Width="16" Height="16" Margin="0,0,8,0" />
+                            <TextBlock VerticalAlignment="Center" FontSize="12" Text="{Binding AssistantStatus}" TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+                        <DockPanel>
+                            <ui:Button DockPanel.Dock="Right" Margin="6,0,0,0" Appearance="Primary" Icon="{ui:SymbolIcon Send24}" Command="{Binding SendChatCommand}"
+                                       VerticalAlignment="Bottom" ToolTip="Enviar (Ctrl+Enter)" />
+                            <ui:TextBox x:Name="ChatBox" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" MaxHeight="180" VerticalContentAlignment="Top"
+                                        PlaceholderText="Responda ou peça ajustes. Ctrl+Enter envia."
+                                        Text="{Binding ChatInput, UpdateSourceTrigger=PropertyChanged}">
+                                <ui:TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding SendChatCommand}" />
+                                </ui:TextBox.InputBindings>
+                            </ui:TextBox>
+                        </DockPanel>
+                        <TextBlock Style="{StaticResource Hint}" Text="{Binding TokenUsage}" Visibility="{Binding TokenUsage, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+
+                    <!-- Mensagens -->
+                    <ScrollViewer x:Name="ChatScroll" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Hint}" Margin="4,8,4,8"
+                                       Visibility="{Binding ChatMessages.Count, Converter={StaticResource InverseBoolToVisibility}}"
+                                       Text="O assistente entrevista você, busca skills parecidas no repositório (e na web, se ligado), preenche os campos e corrige o que a validação apontar. Nada é salvo em disco sem você clicar em Salvar." />
+                            <ItemsControl ItemsSource="{Binding ChatMessages}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:ChatMessageViewModel}">
+                                        <Grid Margin="0,4">
+                                            <!-- Atividade (ferramentas, busca, avisos) -->
+                                            <StackPanel Orientation="Horizontal" Margin="6,0" Visibility="{Binding IsActivity, Converter={StaticResource BoolToVisibility}}">
+                                                <ui:SymbolIcon Symbol="{Binding Icon}" FontSize="13" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,6,0" />
+                                                <TextBlock FontSize="12" TextWrapping="Wrap" MaxWidth="330" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Text}" />
+                                            </StackPanel>
+                                            <!-- Usuário -->
+                                            <Border HorizontalAlignment="Right" MaxWidth="320" CornerRadius="10,10,2,10" Padding="10,7"
+                                                    Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                                    Visibility="{Binding IsUser, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}" Text="{Binding Text}" />
+                                            </Border>
+                                            <!-- Assistente -->
+                                            <Border HorizontalAlignment="Left" MaxWidth="350" CornerRadius="10,10,10,2" Padding="10,7"
+                                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                                                    Visibility="{Binding IsAssistant, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBox Text="{Binding Text, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0"
+                                                         Background="Transparent" Padding="0" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            </Border>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </ui:Card>
+        </Grid>
+
+        <!-- Barra de status -->
+        <Border Grid.Row="3" Padding="16,6" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}">
+            <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+        </Border>
+    </Grid>
+</ui:FluentWindow>

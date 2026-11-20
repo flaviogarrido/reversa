@@ -26,7 +26,7 @@ if (!command || command === '--help' || command === '-h') {
 
   reversa v${pkg.version}
 
-  Uso: npx reversa <comando>
+  Uso: npx ${pkg.name} <comando>
 
   Comandos:
     install            Instala o Reversa no projeto atual (todos os agentes)
@@ -57,7 +57,7 @@ if (command === '--version' || command === '-v') {
 
 if (!commands[command]) {
   console.error(`\n  Comando desconhecido: "${command}"`);
-  console.error('  Execute "npx reversa --help" para ver os comandos disponíveis.\n');
+  console.error(`  Execute "npx ${pkg.name} --help" para ver os comandos disponíveis.\n`);
   process.exit(1);
 }
 
