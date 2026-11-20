@@ -18,7 +18,7 @@ public enum Severity
 public enum SkillField
 {
     Name, Description, Invocation, DisplayName, ShortDescription, License, Compatibility,
-    Metadata, Body, Files, Package, Tests,
+    Metadata, Body, Files, Package, Tests, Docs,
 }
 
 public sealed record ValidationIssue(
@@ -34,7 +34,7 @@ public sealed record ValidationIssue(
 }
 
 /// <summary>Contexto do repositório no momento da validação.</summary>
-public sealed class ValidationContext
+public sealed record ValidationContext
 {
     /// <summary>Nomes de todas as pastas em agents/ (inclui a própria skill quando ela já existe).</summary>
     public IReadOnlySet<string> ExistingSkillNames { get; init; } = new HashSet<string>();
@@ -57,15 +57,12 @@ public sealed class ValidationContext
     /// <summary>Última execução do Playground, para avisar de falhas e resultados desatualizados.</summary>
     public Evals.EvalReport? LastEvalRun { get; init; }
 
-    public ValidationContext WithEvals(Evals.EvalSuite? suite, Evals.EvalReport? lastRun) => new()
-    {
-        ExistingSkillNames = ExistingSkillNames,
-        PreferredPrefix = PreferredPrefix,
-        RepoSkillFilePaths = RepoSkillFilePaths,
-        UpstreamPrefix = UpstreamPrefix,
-        Evals = suite,
-        LastEvalRun = lastRun,
-    };
+    /// <summary>Páginas da skill no site (docs/agentes/). Nulo desliga as regras RS110–RS112.</summary>
+    public Docs.DocsStatus? Docs { get; init; }
+
+    public ValidationContext WithEvals(Evals.EvalSuite? suite, Evals.EvalReport? lastRun) => this with { Evals = suite, LastEvalRun = lastRun };
+
+    public ValidationContext WithDocs(Docs.DocsStatus? docs) => this with { Docs = docs };
 
     public static ValidationContext Empty { get; } = new();
 }

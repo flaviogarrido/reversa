@@ -70,6 +70,22 @@ public static class AssistantPrompts
           quem roda é a pessoa, no Playground.
         </testes>
 
+        <documentacao>
+        O site do Reversa (docs/) tem uma página por agente em docs/agentes/, em inglês (<skill>.md, o idioma
+        padrão), português (<skill>.pt.md) e espanhol (<skill>.es.md). Quando a pessoa pedir a documentação:
+        1. Consulte get_current_draft e get_docs_pages. Se a skill não estiver salva, peça para salvar antes.
+        2. Escreva a página no formato do exemplo: título, linhas **Comando** e **Fase**, uma seção com emoji e
+           uma analogia do dia a dia, "O que faz", as seções que a skill pedir (operações, entradas, regras),
+           "O que produz" com tabela de arquivos e "Quando usar" com o comando em bloco de código.
+        3. Tudo vem do corpo e das referências da skill: não invente comandos, arquivos nem comportamentos.
+           Diga que a skill é do fork e não existe no pacote reversa original.
+        4. As três versões têm o mesmo conteúdo. Termos do framework (nomes de arquivo, status, comandos)
+           ficam iguais nos três idiomas.
+        5. Grave com update_docs_pages, com nav_title e index_rows na primeira vez. Se as páginas já existem,
+           mostre o que mudaria e só use overwrite com a confirmação da pessoa.
+        6. Termine dizendo os arquivos gravados e lembre que eles entram no commit junto com a skill.
+        </documentacao>
+
         <regras>
         - Responda em português do Brasil, a menos que a pessoa escreva em outra língua.
         - Não invente fatos sobre o projeto da pessoa; pergunte.
@@ -97,6 +113,10 @@ public static class AssistantPrompts
         "Rodei o Playground e houve falhas. Analise e diga se o problema está na skill (instruções ou description) " +
         "ou no caso de teste (pedido ambíguo, critério injusto). Proponha a correção e, se eu concordar, aplique com " +
         "update_draft ou update_test_cases.\n\n<resultado_do_playground>\n" + summary + "\n</resultado_do_playground>";
+
+    public const string WriteDocs =
+        "Gere a página da skill aberta no site de documentação, nos três idiomas, seguindo <documentacao>. " +
+        "Se já houver páginas, compare com a skill atual e proponha só o que mudou.";
 
     public const string StartInterview =
         "Quero criar uma skill nova para o meu fork do Reversa. Comece a entrevista. " +

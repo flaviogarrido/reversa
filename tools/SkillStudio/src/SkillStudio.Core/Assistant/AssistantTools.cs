@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using SkillStudio.Core.Docs;
 using SkillStudio.Core.Evals;
 using SkillStudio.Core.IO;
 using SkillStudio.Core.Model;
@@ -12,7 +13,8 @@ namespace SkillStudio.Core.Assistant;
 /// Implementação local das ferramentas do assistente. Independente do SDK para ser testável:
 /// recebe o input como JSON e devolve o texto do tool_result.
 /// </summary>
-public sealed class AssistantTools(SkillRepository repository, Func<SkillSearchIndex> index, IDraftHost host, IEvalHost? evals = null)
+public sealed class AssistantTools(SkillRepository repository, Func<SkillSearchIndex> index, IDraftHost host, IEvalHost? evals = null,
+    DocsStore? docs = null, Action? docsChanged = null)
 {
     public const string SearchSimilar = "search_similar_skills";
     public const string ReadSkill = "read_skill";
@@ -20,6 +22,8 @@ public sealed class AssistantTools(SkillRepository repository, Func<SkillSearchI
     public const string UpdateDraft = "update_draft";
     public const string GetTestCases = "get_test_cases";
     public const string UpdateTestCases = "update_test_cases";
+    public const string GetDocsPages = "get_docs_pages";
+    public const string UpdateDocsPages = "update_docs_pages";
 
     private const int MaxReadChars = 60_000;
 
@@ -39,10 +43,16 @@ public sealed class AssistantTools(SkillRepository repository, Func<SkillSearchI
                 UpdateDraft => DoUpdate(input),
                 GetTestCases => DoGetCases(),
                 UpdateTestCases => DoUpdateCases(input),
+                GetDocsPages => DoGetDocs(),
+                UpdateDocsPages => DoUpdateDocs(input),
                 _ => new ToolOutcome($"Ferramenta desconhecida: {name}", true, $"ferramenta desconhecida {name}"),
             };
         }
         catch (ToolInputException ex)
+        {
+            return new ToolOutcome($"Entrada inválida: {ex.Message}", true, $"entrada inválida em {name}");
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException && name is GetDocsPages or UpdateDocsPages)
         {
             return new ToolOutcome($"Entrada inválida: {ex.Message}", true, $"entrada inválida em {name}");
         }
@@ -233,6 +243,84 @@ public sealed class AssistantTools(SkillRepository repository, Func<SkillSearchI
             $"{(upserts.Count > 0 ? $"gravou {upserts.Count} caso(s) de teste" : "")}{(upserts.Count > 0 && removals.Count > 0 ? " e " : "")}{(removals.Count > 0 ? $"removeu {removals.Count}" : "")}");
     }
 
+    // ------------------------------------------------------------------ página do site (docs/agentes/)
+
+    /// <summary>Páginas que servem de modelo de formato, na ordem de preferência.</summary>
+    private static readonly string[] DocsExamples = ["fg-backlog", "n8n", "scout"];
+
+    private DocsStore RequireDocs() =>
+        docs is { IsAvailable: true } d ? d : throw new ToolInputException("o repositório aberto não tem o site de documentação (docs/agentes/ e mkdocs.yml).");
+
+    /// <summary>A página é ligada à skill salva: um nome ainda não gravado criaria páginas órfãs.</summary>
+    private string RequireSavedForkSkill()
+    {
+        var d = host.GetDraft();
+        var name = d.Name.Trim();
+        if (string.IsNullOrEmpty(d.OriginalName) || d.OriginalName != name)
+            throw new ToolInputException("salve a skill antes de documentá-la: a página usa o nome da pasta em agents/.");
+        if (name.StartsWith("reversa", StringComparison.Ordinal))
+            throw new ToolInputException("skills do upstream já têm páginas com nomes próprios; o gerador é para skills do fork.");
+        return name;
+    }
+
+    private ToolOutcome DoGetDocs()
+    {
+        var store = RequireDocs();
+        var skill = RequireSavedForkSkill();
+        var status = store.Status(skill);
+        var example = DocsExamples.Where(e => e != skill).Select(e => (Name: e, Pages: store.LoadPages(e)))
+            .FirstOrDefault(e => e.Pages.Count == DocsStore.Languages.Count);
+        var payload = new
+        {
+            skill,
+            arquivos = DocsStore.Languages.ToDictionary(l => l.Code, l => DocsStore.RelativePagePath(skill, l.Code)),
+            presentes = status.PresentLanguages,
+            faltando = status.MissingLanguages,
+            no_menu = status.InNav,
+            paginas_atuais = store.LoadPages(skill),
+            exemplo = example.Name is null ? null : new { skill = example.Name, paginas = example.Pages },
+        };
+        return new ToolOutcome("<referencia_somente_leitura>\n" + JsonSerializer.Serialize(payload, Json) + "\n</referencia_somente_leitura>",
+            false, $"consultou a documentação de {skill} ({status.PresentLanguages.Count} de {DocsStore.Languages.Count} idiomas)");
+    }
+
+    private ToolOutcome DoUpdateDocs(JsonObject input)
+    {
+        var store = RequireDocs();
+        var skill = RequireSavedForkSkill();
+        var pages = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (input["pages"] is JsonObject p)
+            foreach (var l in DocsStore.Languages)
+                if (OptionalString(p, l.Code) is { Length: > 0 } content)
+                    pages[l.Code] = content;
+        if (pages.Count == 0)
+            throw new ToolInputException("informe ao menos uma página em pages (en, pt ou es).");
+
+        Dictionary<string, DocsIndexRow>? rows = null;
+        if (input["index_rows"] is JsonObject idx)
+        {
+            rows = [];
+            foreach (var l in DocsStore.Languages)
+                if (idx[l.Code] is JsonObject row)
+                    rows[l.Code] = new DocsIndexRow(RequiredString(row, "analogy"), RequiredString(row, "when_to_use"));
+        }
+
+        var overwrite = input["overwrite"] is JsonValue ov && ov.TryGetValue<bool>(out var o) && o;
+        var result = store.Save(skill, pages, OptionalString(input, "nav_title"), rows, overwrite);
+        docsChanged?.Invoke();
+        var status = store.Status(skill);
+        var payload = new
+        {
+            gravados = result.WrittenFiles,
+            menu_atualizado = result.NavAdded,
+            indice_atualizado = result.IndexRowsAdded,
+            faltando = status.MissingLanguages,
+            no_menu = status.InNav,
+        };
+        return new ToolOutcome(JsonSerializer.Serialize(payload, Json), false,
+            $"gravou a documentação de {skill} ({string.Join(", ", pages.Keys)}){(result.NavAdded ? " e a registrou no menu" : "")}");
+    }
+
     private static object DescribeCase(EvalCase c) => new
     {
         id = c.Id,
@@ -361,6 +449,32 @@ public sealed class AssistantTools(SkillRepository repository, Func<SkillSearchI
              "required":["kind","prompt"],"additionalProperties":false}},
            "remove_ids":{"type":"array","items":{"type":"string"}}},
           "additionalProperties":false}
+         """),
+        (GetDocsPages,
+         "Devolve a situação da página da skill aberta no site de documentação (docs/agentes/<skill>.md em inglês, " +
+         ".pt.md e .es.md), o conteúdo atual das páginas que existem, se ela está no menu do site e uma página de outra " +
+         "skill nos três idiomas como modelo de formato. A skill precisa estar salva.",
+         """{"type":"object","properties":{},"additionalProperties":false}"""),
+        (UpdateDocsPages,
+         "Grava a página da skill aberta no site de documentação e, na primeira vez, a registra no menu (grupo Fork Agents) " +
+         "e no índice de agentes. Diferente de update_draft, grava direto no disco. Cada página segue o modelo de " +
+         "get_docs_pages: título, comando e fase, uma analogia, o que faz, o que produz e quando usar. As três versões " +
+         "dizem a mesma coisa, cada uma no seu idioma. Página que já existe só é substituída com overwrite=true.",
+         """
+         {"type":"object","properties":{
+           "pages":{"type":"object","properties":{
+               "en":{"type":"string","description":"Página em inglês, o idioma padrão do site (Markdown começando com # )."},
+               "pt":{"type":"string","description":"Página em português do Brasil."},
+               "es":{"type":"string","description":"Página em espanhol."}},
+             "additionalProperties":false},
+           "nav_title":{"type":"string","description":"Título no menu, em inglês, ex.: Backlog (fg-backlog). Obrigatório se a skill ainda não está no menu."},
+           "index_rows":{"type":"object","description":"Linha da tabela de agentes do fork no índice de cada idioma.","properties":{
+               "en":{"type":"object","properties":{"analogy":{"type":"string","description":"A analogia da página, ex.: O gerente de produto com a planilha."},"when_to_use":{"type":"string","description":"Uma frase: quando usar a skill."}},"required":["analogy","when_to_use"],"additionalProperties":false},
+               "pt":{"type":"object","properties":{"analogy":{"type":"string","description":"A analogia da página, ex.: O gerente de produto com a planilha."},"when_to_use":{"type":"string","description":"Uma frase: quando usar a skill."}},"required":["analogy","when_to_use"],"additionalProperties":false},
+               "es":{"type":"object","properties":{"analogy":{"type":"string","description":"A analogia da página, ex.: O gerente de produto com a planilha."},"when_to_use":{"type":"string","description":"Uma frase: quando usar a skill."}},"required":["analogy","when_to_use"],"additionalProperties":false}},
+             "additionalProperties":false},
+           "overwrite":{"type":"boolean","description":"true para substituir páginas que já existem."}},
+          "required":["pages"],"additionalProperties":false}
          """),
     ];
 }

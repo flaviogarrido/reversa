@@ -47,7 +47,7 @@ public sealed class AssistantWireTests
         Assert.DoesNotContain("budget_tokens", raw);
         Assert.DoesNotContain("\"thinking\"", raw);
         var toolNames = body.GetProperty("tools").EnumerateArray().Select(t => t.GetProperty("name").GetString()).ToList();
-        Assert.Equal(["search_similar_skills", "read_skill", "get_current_draft", "update_draft", "get_test_cases", "update_test_cases", "web_search"], toolNames);
+        Assert.Equal(["search_similar_skills", "read_skill", "get_current_draft", "update_draft", "get_test_cases", "update_test_cases", "get_docs_pages", "update_docs_pages", "web_search"], toolNames);
     }
 
     [Fact]

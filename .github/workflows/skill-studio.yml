@@ -9,12 +9,16 @@ on:
     paths:
       - 'agents/**'
       - 'evals/**'
+      - 'docs/agentes/**'
+      - 'mkdocs.yml'
       - 'tools/SkillStudio/**'
       - '.github/workflows/skill-studio.yml'
   pull_request:
     paths:
       - 'agents/**'
       - 'evals/**'
+      - 'docs/agentes/**'
+      - 'mkdocs.yml'
       - 'tools/SkillStudio/**'
   workflow_dispatch:
 
