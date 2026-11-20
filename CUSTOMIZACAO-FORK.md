@@ -141,8 +141,9 @@ A publicação é feita pelo workflow `.github/workflows/publish.yml`, disparado
 
 **Configuração (uma vez só):**
 
-1. No npmjs.com, crie a conta ou organização dona do escopo `@flaviogarrido` e gere um token do tipo *Automation*.
-2. No GitHub do fork, em *Settings → Secrets and variables → Actions*, crie o segredo `NPM_TOKEN` com esse token.
+1. No npmjs.com, crie a conta ou organização dona do escopo `@flaviogarrido`.
+2. Faça a primeira publicação com um token granular (*Read and write*, com *Bypass 2FA*) guardado no segredo `NPM_TOKEN` do fork, em *Settings → Secrets and variables → Actions*.
+3. Com o pacote já no npm, configure em *pacote → Settings → Trusted Publisher* o GitHub Actions com o repositório `flaviogarrido/reversa` e o workflow `publish.yml`. A partir daí o workflow autentica por OIDC (npm ≥ 11.5.1, garantido no próprio workflow), e o token e o segredo `NPM_TOKEN` podem ser apagados.
 
 **A cada release:**
 
@@ -206,6 +207,6 @@ Se as suas skills ficarem em pastas `fg-*` e você mexer pouco em `lib/`, os con
 - [ ] Instalação testada num projeto descartável
 - [ ] `npm pack --dry-run` lista a skill
 - [x] `package.json` com nome com escopo e `update.js` usando o nome do pacote
-- [ ] Segredo `NPM_TOKEN` configurado no GitHub do fork
+- [ ] Trusted Publisher configurado no pacote do npm (ou, só na primeira publicação, o segredo `NPM_TOKEN`)
 - [ ] `npm version patch` e `git push --follow-tags` (o workflow publica)
 - [ ] Remoto `upstream` configurado e sincronizado periodicamente
