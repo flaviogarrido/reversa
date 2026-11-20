@@ -59,5 +59,14 @@ public static class RuleCatalog
         new("RS090", "Pacote", "Erro", "Porte de verify-invocation.py aplicado aos arquivos gerados (lockstep, display_name, short_description)."),
         new("RS091", "Pacote", "Erro", "Ida e volta pelo YAML preserva nome, description e invocação."),
         new("RS092", "Pacote", "Aviso", "Skill até 512 KB de texto."),
+        new("RS100", "Testes", "Info", "Skill sem casos de teste no Playground."),
+        new("RS101", "Testes", "Aviso", "Model-invoked precisa de casos de gatilho positivos e negativos."),
+        new("RS102", "Testes", "Aviso", "Caso de comportamento sem asserções."),
+        new("RS103", "Testes", "Aviso", "Casos de gatilho em skill user-invoked são ignorados."),
+        new("RS104", "Testes", "Aviso", "Expressão regular inválida em asserção."),
+        new("RS105", "Testes", "Aviso", "Caso sem pedido não é executado."),
+        new("RS106", "Testes", "Info", "Casos com o mesmo pedido."),
+        new("RS107", "Testes", "Info", "Casos ainda não executados ou resultado desatualizado."),
+        new("RS108", "Testes", "Aviso", "Casos que falharam na última execução."),
     ];
 }

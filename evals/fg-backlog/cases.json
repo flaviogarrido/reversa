@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "skill": "fg-backlog",
+  "cases": [
+    {
+      "id": "c01",
+      "title": "Adicionar item sem Esforço pergunta antes de registrar",
+      "kind": "Behavior",
+      "prompt": "adicionar: exportar pedidos em CSV para o financeiro conciliar. Valor alto.\n\nContexto (não há acesso a arquivos): o backlog atual tem BL-001 e BL-002, ambos com Ordem auto. O autor registrado em .reversa/state.json é Flavio.",
+      "assertions": [
+        {
+          "kind": "Rubric",
+          "value": "Pergunta qual é o Esforço (alto, médio ou baixo) antes de registrar o item, em vez de assumir um valor."
+        },
+        {
+          "kind": "Rubric",
+          "value": "Não apresenta o item como já registrado com um Esforço inventado."
+        }
+      ],
+      "notes": "Protege a regra \"Não invente o valor\": faltando Valor ou Esforço, pergunta numa única mensagem."
+    },
+    {
+      "id": "c02",
+      "title": "Item completo recebe o próximo ID e entra na posição certa",
+      "kind": "Behavior",
+      "prompt": "adicionar: exportar pedidos em CSV para o financeiro conciliar. Valor alto, esforço baixo. Não afeta nenhuma spec.\n\nContexto (não há acesso a arquivos): backlog atual, todos com Ordem auto e status proposta:\n| Pos | ID | Título | Valor | Esforço |\n| 1 | BL-002 | Filtro por data | médio | médio |\n| 2 | BL-001 | Login com SSO | alto | alto |\nO item BL-003 foi descartado antes. Autor: Flavio.",
+      "assertions": [
+        {
+          "kind": "Contains",
+          "value": "BL-004"
+        },
+        {
+          "kind": "Rubric",
+          "value": "O novo item recebe o ID BL-004 (não reutiliza o BL-003 descartado) e status proposta."
+        },
+        {
+          "kind": "Rubric",
+          "value": "O novo item fica na posição 1, por ter a maior nota Valor ÷ Esforço (3 ÷ 1)."
+        },
+        {
+          "kind": "Rubric",
+          "value": "Identifica o quadrante do item como ganho rápido."
+        }
+      ],
+      "notes": "Protege a geração de ID (max + 1, sem reutilizar) e a ordem automática de references/priorizacao.md."
+    },
+    {
+      "id": "c03",
+      "title": "Descartar exige motivo",
+      "kind": "Behavior",
+      "prompt": "descartar o BL-002\n\nContexto (não há acesso a arquivos): BL-002 · Filtro por data, status proposta, sem pasta. Autor: Flavio.",
+      "assertions": [
+        {
+          "kind": "Rubric",
+          "value": "Pede o motivo do descarte antes de mudar o status para descartada."
+        },
+        {
+          "kind": "Rubric",
+          "value": "Não diz que o item será apagado ou excluído do arquivo; se mencionar a seção Descartados, deixa claro que o item continua registrado."
+        },
+        {
+          "kind": "Rubric",
+          "value": "Não afirma que o backlog já foi atualizado nem grava nada antes de receber o motivo."
+        }
+      ],
+      "notes": "Protege a transição para descartada (motivo obrigatório, vai para o log) e o limite 'Não apague itens', sem punir o movimento para a seção Descartados."
+    },
+    {
+      "id": "c04",
+      "title": "Status de item com pasta não muda à mão",
+      "kind": "Behavior",
+      "prompt": "marcar o BL-001 como pronta\n\nContexto (não há acesso a arquivos): BL-001 · Login com SSO está ligado à pasta _reversa_forward/012-login-sso, que tem requirements.md e roadmap.md, mas ainda não tem actions.md.",
+      "assertions": [
+        {
+          "kind": "Rubric",
+          "value": "Recusa a mudança manual e explica que o status de item com pasta é derivado do estágio da pasta."
+        },
+        {
+          "kind": "Rubric",
+          "value": "Indica que o status atual do BL-001 é plan, porque há roadmap.md e falta actions.md."
+        }
+      ],
+      "notes": "Protege a sincronização com o ciclo forward: itens com pasta têm status derivado."
+    },
+    {
+      "id": "c05",
+      "title": "Preparar execução só sugere o comando",
+      "kind": "Behavior",
+      "prompt": "quero levar os 2 primeiros para o pipeline\n\nContexto (não há acesso a arquivos): backlog ordenado, todos sem pasta e com status pronta:\n1. BL-004 · Exportar pedidos em CSV: o financeiro precisa conciliar pedidos fora do sistema.\n2. BL-002 · Filtro por data: relatórios hoje mostram todo o histórico.\n3. BL-001 · Login com SSO: usuários corporativos querem entrar com a conta da empresa.",
+      "assertions": [
+        {
+          "kind": "Contains",
+          "value": "/reversa-forward-autonomous"
+        },
+        {
+          "kind": "Rubric",
+          "value": "Entrega a fila com BL-004 e BL-002, nessa ordem, cada um com ID, título e descrição, e não inclui o BL-001."
+        },
+        {
+          "kind": "Rubric",
+          "value": "Deixa claro que não executa o comando: a decisão de rodar é do usuário."
+        },
+        {
+          "kind": "Rubric",
+          "value": "Lembra de rodar /fg-backlog depois que as pastas forem criadas, para ligar cada item à sua pasta."
+        }
+      ],
+      "notes": "Protege a operação 7 e o limite \"Não rode outra skill: só sugira\"."
+    }
+  ]
+}

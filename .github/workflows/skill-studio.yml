@@ -8,11 +8,13 @@ on:
   push:
     paths:
       - 'agents/**'
+      - 'evals/**'
       - 'tools/SkillStudio/**'
       - '.github/workflows/skill-studio.yml'
   pull_request:
     paths:
       - 'agents/**'
+      - 'evals/**'
       - 'tools/SkillStudio/**'
   workflow_dispatch:
 

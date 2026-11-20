@@ -51,10 +51,37 @@ public sealed class BoolToVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
 }
 
-public sealed class NullToVisibilityConverter : IValueConverter
+/// <summary>Nome de um recurso de pincel (ex.: SystemFillColorSuccessBrush) → o pincel do tema atual.</summary>
+public sealed class ResourceKeyToBrushConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is null ? Visibility.Collapsed : Visibility.Visible;
+        value is string key && Application.Current.TryFindResource(key) is Brush brush ? brush : Brushes.Gray;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
+/// <summary>Rótulos em português para os enums do Playground.</summary>
+public sealed class EnumLabelConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => value switch
+    {
+        Core.Evals.EvalKind.Behavior => "Comportamento",
+        Core.Evals.EvalKind.Trigger => "Gatilho",
+        Core.Evals.AssertionKind.Rubric => "Rubrica (juiz)",
+        Core.Evals.AssertionKind.Contains => "Contém",
+        Core.Evals.AssertionKind.NotContains => "Não contém",
+        Core.Evals.AssertionKind.Regex => "Regex",
+        _ => value?.ToString() ?? "",
+    };
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}
+
+public sealed class NullToVisibilityConverter : IValueConverter
+{
+    /// <summary>ConverterParameter="invert" mostra quando o valor é nulo.</summary>
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        (value is null) ^ (parameter as string == "invert") ? Visibility.Collapsed : Visibility.Visible;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
 }

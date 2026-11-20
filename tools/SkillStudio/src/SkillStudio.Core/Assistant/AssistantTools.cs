@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using SkillStudio.Core.Evals;
 using SkillStudio.Core.IO;
 using SkillStudio.Core.Model;
 using SkillStudio.Core.Search;
@@ -11,12 +12,14 @@ namespace SkillStudio.Core.Assistant;
 /// Implementação local das ferramentas do assistente. Independente do SDK para ser testável:
 /// recebe o input como JSON e devolve o texto do tool_result.
 /// </summary>
-public sealed class AssistantTools(SkillRepository repository, Func<SkillSearchIndex> index, IDraftHost host)
+public sealed class AssistantTools(SkillRepository repository, Func<SkillSearchIndex> index, IDraftHost host, IEvalHost? evals = null)
 {
     public const string SearchSimilar = "search_similar_skills";
     public const string ReadSkill = "read_skill";
     public const string GetCurrentDraft = "get_current_draft";
     public const string UpdateDraft = "update_draft";
+    public const string GetTestCases = "get_test_cases";
+    public const string UpdateTestCases = "update_test_cases";
 
     private const int MaxReadChars = 60_000;
 
@@ -34,6 +37,8 @@ public sealed class AssistantTools(SkillRepository repository, Func<SkillSearchI
                 ReadSkill => DoRead(input),
                 GetCurrentDraft => DoGetDraft(),
                 UpdateDraft => DoUpdate(input),
+                GetTestCases => DoGetCases(),
+                UpdateTestCases => DoUpdateCases(input),
                 _ => new ToolOutcome($"Ferramenta desconhecida: {name}", true, $"ferramenta desconhecida {name}"),
             };
         }
@@ -157,6 +162,96 @@ public sealed class AssistantTools(SkillRepository repository, Func<SkillSearchI
             $"preencheu {string.Join(", ", changed)} · {report.ErrorCount} erro(s), {report.WarningCount} aviso(s)");
     }
 
+    // ------------------------------------------------------------------ casos de teste (Playground)
+
+    private IEvalHost RequireEvals() =>
+        evals ?? throw new ToolInputException("o Playground não está disponível nesta sessão.");
+
+    private ToolOutcome DoGetCases()
+    {
+        var suite = RequireEvals().GetSuite();
+        var payload = suite.Cases.Select(DescribeCase);
+        return new ToolOutcome(suite.Cases.Count == 0 ? "A skill ainda não tem casos de teste." : JsonSerializer.Serialize(payload, Json),
+            false, $"consultou os casos de teste ({suite.Cases.Count})");
+    }
+
+    private ToolOutcome DoUpdateCases(JsonObject input)
+    {
+        var evalHost = RequireEvals();
+        var upserts = new List<EvalCase>();
+        if (input["cases"] is JsonArray cases)
+            foreach (var item in cases.OfType<JsonObject>())
+            {
+                var kind = RequiredString(item, "kind") switch
+                {
+                    "trigger" => EvalKind.Trigger,
+                    "behavior" => EvalKind.Behavior,
+                    _ => throw new ToolInputException("kind deve ser \"trigger\" ou \"behavior\"."),
+                };
+                var c = new EvalCase
+                {
+                    Id = OptionalString(item, "id") ?? "",
+                    Title = OptionalString(item, "title") ?? "",
+                    Kind = kind,
+                    Prompt = RequiredString(item, "prompt"),
+                    Notes = OptionalString(item, "notes"),
+                };
+                if (kind == EvalKind.Trigger)
+                    c.ShouldTrigger = item["should_trigger"] is JsonValue v && v.TryGetValue<bool>(out var b)
+                        ? b
+                        : throw new ToolInputException("casos trigger precisam de should_trigger (true/false).");
+                if (item["assertions"] is JsonArray asserts)
+                    foreach (var a in asserts.OfType<JsonObject>())
+                        c.Assertions.Add(new EvalAssertion
+                        {
+                            Kind = RequiredString(a, "kind") switch
+                            {
+                                "contains" => AssertionKind.Contains,
+                                "not_contains" => AssertionKind.NotContains,
+                                "regex" => AssertionKind.Regex,
+                                "rubric" => AssertionKind.Rubric,
+                                _ => throw new ToolInputException("assertion.kind deve ser contains, not_contains, regex ou rubric."),
+                            },
+                            Value = RequiredString(a, "value"),
+                        });
+                if (kind == EvalKind.Behavior && c.Assertions.Count == 0)
+                    throw new ToolInputException($"o caso \"{c.Title}\" é de comportamento e precisa de ao menos uma asserção.");
+                upserts.Add(c);
+            }
+        var removals = input["remove_ids"] is JsonArray ids
+            ? ids.Select(i => i?.GetValue<string>() ?? "").Where(i => i.Length > 0).ToList()
+            : [];
+        if (upserts.Count == 0 && removals.Count == 0)
+            throw new ToolInputException("nenhum caso para criar, alterar ou remover.");
+
+        var suite = evalHost.ApplyCases(upserts, removals);
+        var draft = host.GetDraft();
+        var report = host.Validate(draft);
+        var testIssues = report.Issues.Where(i => i.Field == SkillField.Tests).Select(FormatIssue).ToList();
+        var result = new { total = suite.Cases.Count, casos = suite.Cases.Select(c => new { c.Id, c.Title }), problemas = testIssues };
+        return new ToolOutcome(JsonSerializer.Serialize(result, Json), false,
+            $"{(upserts.Count > 0 ? $"gravou {upserts.Count} caso(s) de teste" : "")}{(upserts.Count > 0 && removals.Count > 0 ? " e " : "")}{(removals.Count > 0 ? $"removeu {removals.Count}" : "")}");
+    }
+
+    private static object DescribeCase(EvalCase c) => new
+    {
+        id = c.Id,
+        title = c.Title,
+        kind = c.Kind == EvalKind.Trigger ? "trigger" : "behavior",
+        prompt = c.Prompt,
+        should_trigger = c.ShouldTrigger,
+        assertions = c.Assertions.Select(a => new { kind = AssertionKindName(a.Kind), value = a.Value }),
+        notes = c.Notes,
+    };
+
+    private static string AssertionKindName(AssertionKind k) => k switch
+    {
+        AssertionKind.Contains => "contains",
+        AssertionKind.NotContains => "not_contains",
+        AssertionKind.Regex => "regex",
+        _ => "rubric",
+    };
+
     public static object DescribeDraft(SkillDraft d, ValidationReport report) => new
     {
         skill_existente = d.OriginalName,
@@ -241,6 +336,30 @@ public sealed class AssistantTools(SkillRepository repository, Func<SkillSearchI
                "path":{"type":"string","description":"Caminho relativo, ex.: references/template.md"},
                "content":{"type":"string"}},"required":["path","content"],"additionalProperties":false}},
            "remove_files":{"type":"array","items":{"type":"string"}}},
+          "additionalProperties":false}
+         """),
+        (GetTestCases,
+         "Devolve os casos de teste do Playground para a skill aberta (pedido, tipo e asserções).",
+         """{"type":"object","properties":{},"additionalProperties":false}"""),
+        (UpdateTestCases,
+         "Cria, altera (mesmo id) ou remove casos de teste do Playground. Não executa os testes: quem roda é a pessoa, no Playground. " +
+         "trigger: pedido realista e should_trigger (true = deve acionar a skill; false = pedido parecido que NÃO deve). Só para skills model-invoked. " +
+         "behavior: pedido que exercita a skill, com o contexto necessário embutido (o teste não tem acesso a arquivos), " +
+         "e asserções verificáveis só pela resposta: rubric (critério objetivo em uma frase), contains, not_contains ou regex.",
+         """
+         {"type":"object","properties":{
+           "cases":{"type":"array","items":{"type":"object","properties":{
+               "id":{"type":"string","description":"Omitir para caso novo; informar para substituir um existente."},
+               "title":{"type":"string","description":"Rótulo curto, ex.: Caminho feliz com backlog vazio."},
+               "kind":{"type":"string","enum":["trigger","behavior"]},
+               "prompt":{"type":"string","description":"O pedido exatamente como o usuário digitaria."},
+               "should_trigger":{"type":"boolean"},
+               "assertions":{"type":"array","items":{"type":"object","properties":{
+                   "kind":{"type":"string","enum":["rubric","contains","not_contains","regex"]},
+                   "value":{"type":"string"}},"required":["kind","value"],"additionalProperties":false}},
+               "notes":{"type":"string","description":"Por que o caso existe (o que ele protege)."}},
+             "required":["kind","prompt"],"additionalProperties":false}},
+           "remove_ids":{"type":"array","items":{"type":"string"}}},
           "additionalProperties":false}
          """),
     ];

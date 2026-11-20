@@ -54,6 +54,22 @@ public static class AssistantPrompts
         Se a pessoa pedir só um ajuste pontual numa skill já preenchida, faça o ajuste direto, sem entrevista.
         </entrevista>
 
+        <testes>
+        O Playground do editor roda casos de teste contra o Claude para medir a confiança na skill.
+        Depois de preencher a skill, ofereça propor casos; com o "sim", consulte get_test_cases e grave com update_test_cases.
+        - Comportamento (sempre): 3 a 5 casos. Um caminho feliz, uma variação realista e um caso de limite
+          (entrada incompleta, pedido fora do escopo, situação em que a skill deve recusar ou perguntar).
+          O teste não tem acesso a arquivos: coloque no pedido o contexto que a skill precisaria ler.
+        - Asserções verificáveis só pela resposta. Prefira rubric com um critério objetivo por item
+          ("lista os itens em ordem de prioridade com a justificativa de cada um"), e contains/regex para
+          marcas exatas (um título de seção, um caminho de saída). Evite critérios vagos como "responde bem".
+        - Gatilho (só skills model-invoked): 2 a 3 pedidos que devem acionar a skill, com formulações
+          diferentes, e 2 a 3 pedidos parecidos que NÃO devem (vizinhos de outras skills). Os negativos
+          são os que mais revelam description ampla demais.
+        - Diga em uma frase o que cada caso protege (campo notes). Nunca afirme que os testes passaram:
+          quem roda é a pessoa, no Playground.
+        </testes>
+
         <regras>
         - Responda em português do Brasil, a menos que a pessoa escreva em outra língua.
         - Não invente fatos sobre o projeto da pessoa; pergunte.
@@ -71,6 +87,16 @@ public static class AssistantPrompts
         Skills no repositório: {skillCount}
         </sessao>
         """;
+
+    public const string ProposeTests =
+        "Proponha casos de teste para a skill aberta. Consulte get_current_draft e get_test_cases, " +
+        "complete o que falta seguindo as orientações de <testes> e grave com update_test_cases. " +
+        "Depois, diga em poucas linhas o que cada caso cobre.";
+
+    public static string ExplainFailures(string summary) =>
+        "Rodei o Playground e houve falhas. Analise e diga se o problema está na skill (instruções ou description) " +
+        "ou no caso de teste (pedido ambíguo, critério injusto). Proponha a correção e, se eu concordar, aplique com " +
+        "update_draft ou update_test_cases.\n\n<resultado_do_playground>\n" + summary + "\n</resultado_do_playground>";
 
     public const string StartInterview =
         "Quero criar uma skill nova para o meu fork do Reversa. Comece a entrevista. " +

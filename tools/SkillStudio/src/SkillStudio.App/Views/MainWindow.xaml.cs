@@ -17,7 +17,7 @@ public partial class MainWindow : FluentWindow
     public MainWindow()
     {
         InitializeComponent();
-        _vm = new MainViewModel { ConfirmAsync = ConfirmAsync };
+        _vm = new MainViewModel { ConfirmAsync = ConfirmAsync, ConfirmActionAsync = ConfirmActionAsync };
         DataContext = _vm;
         Loaded += (_, _) =>
         {
@@ -59,13 +59,15 @@ public partial class MainWindow : FluentWindow
         }
     }
 
-    private async Task<bool> ConfirmAsync(string title, string message)
+    private Task<bool> ConfirmAsync(string title, string message) => ConfirmActionAsync(title, message, "Descartar");
+
+    private async Task<bool> ConfirmActionAsync(string title, string message, string primary)
     {
         var box = new Wpf.Ui.Controls.MessageBox
         {
             Title = title,
-            Content = message,
-            PrimaryButtonText = "Descartar",
+            Content = new System.Windows.Controls.TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, MaxWidth = 460 },
+            PrimaryButtonText = primary,
             CloseButtonText = "Cancelar",
         };
         return await box.ShowDialogAsync() == Wpf.Ui.Controls.MessageBoxResult.Primary;

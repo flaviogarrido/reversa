@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SkillStudio.App.Services;
 using SkillStudio.Core.Assistant;
+using SkillStudio.Core.Evals;
 using SkillStudio.Core.IO;
 using SkillStudio.Core.Model;
 using SkillStudio.Core.Search;
@@ -16,9 +17,9 @@ using SkillStudio.Core.Validation;
 
 namespace SkillStudio.App.ViewModels;
 
-public sealed partial class MainViewModel : ObservableObject, IDraftHost
+public sealed partial class MainViewModel : ObservableObject, IDraftHost, IEvalHost
 {
-    public const int TabIdentity = 0, TabBody = 1, TabFiles = 2, TabMetadata = 3, TabPreview = 4, TabRules = 5;
+    public const int TabIdentity = 0, TabBody = 1, TabFiles = 2, TabMetadata = 3, TabPreview = 4, TabPlayground = 5, TabRules = 6;
 
     private readonly SkillValidator _validator = new();
     private readonly DispatcherTimer _debounce;
@@ -31,10 +32,14 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
     private bool _suspend;
     private SkillAssistant? _assistant;
     private CancellationTokenSource? _chatCts;
+    private EvalStore? _evalStore;
+    private IReadOnlyList<SkillSummary> _summaries = [];
 
     public MainViewModel()
     {
         _settings = AppSettings.Load();
+        Playground = new PlaygroundViewModel(this);
+        Playground.SuiteChanged += ScheduleValidation;
         _debounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _debounce.Tick += (_, _) => { _debounce.Stop(); Revalidate(); };
 
@@ -53,6 +58,8 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
 
     public IReadOnlyList<RuleInfo> Rules => RuleCatalog.All;
     public AppSettings Settings => _settings;
+    public PlaygroundViewModel Playground { get; }
+    public IReadOnlyList<SkillSummary> RepoSummaries => _summaries;
 
     // ------------------------------------------------------------------ repositório e lista
 
@@ -84,6 +91,7 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
         try
         {
             _repo = new SkillRepository(root);
+            _evalStore = new EvalStore(_repo.Root);
             RepositoryPath = _repo.Root;
             _settings.RepositoryPath = _repo.Root;
             _settings.Save();
@@ -101,8 +109,10 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
     {
         if (_repo is null) return;
         var summaries = _repo.ListSkills();
+        _summaries = summaries;
+        var withTests = _evalStore?.ListSkillsWithCases() ?? new HashSet<string>();
         Skills.Clear();
-        foreach (var s in summaries) Skills.Add(new SkillListItem(s));
+        foreach (var s in summaries) Skills.Add(new SkillListItem(s, withTests.Contains(s.Name)));
         _index = SkillSearchIndex.Build(summaries);
         _context = _repo.CreateValidationContext(_settings.PreferredPrefix);
         var (pkg, version) = _repo.ReadPackageInfo();
@@ -247,6 +257,7 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
             SelectedFile = Files.FirstOrDefault();
             EditorTitle = title;
             IsExistingSkill = !d.IsNew;
+            LoadEvals(d);
             if (AutoDisplayName) DisplayName = SkillSerializer.SuggestDisplayName(Name);
             if (AutoShortDescription) ShortDescription = SkillSerializer.SuggestShortDescription(Description);
         }
@@ -262,7 +273,50 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
     private string Snapshot()
     {
         var d = BuildDraft();
-        return string.Join("\u0001", SkillSerializer.RenderAll(d).Select(f => f.RelativePath + "\u0002" + f.Content));
+        return string.Join("\u0001", SkillSerializer.RenderAll(d).Select(f => f.RelativePath + "\u0002" + f.Content))
+               + "\u0003" + EvalStore.HashSuite(Playground.ToSuite(d.Name));
+    }
+
+    private void LoadEvals(SkillDraft d)
+    {
+        if (_evalStore is not null && d.OriginalName is { Length: > 0 } name)
+        {
+            try
+            {
+                Playground.Load(_evalStore.LoadSuite(name), _evalStore.LoadLastRun(name));
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or InvalidOperationException)
+            {
+                StatusMessage = $"Não foi possível ler os casos de teste de {name}: {ex.Message}";
+            }
+        }
+        Playground.Load(new EvalSuite { Skill = d.Name }, null);
+    }
+
+    private ValidationContext EvalContext(string skillName) =>
+        _context.WithEvals(Playground.ToSuite(skillName), Playground.LastReport);
+
+    /// <summary>Resultado novo do Playground: grava já se a skill está salva e sem alterações; senão, no próximo Salvar.</summary>
+    public void OnEvalRunCompleted(EvalReport report)
+    {
+        Revalidate();
+        if (!IsDirty && IsExistingSkill && _evalStore is not null)
+        {
+            try
+            {
+                _evalStore.SaveLastRun(Name.Trim(), report);
+                StatusMessage = $"Resultado gravado em evals/{Name.Trim()}/{EvalStore.LastRunFile}. Faça commit junto com a skill.";
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                StatusMessage = $"Falha ao gravar o resultado: {ex.Message}";
+            }
+        }
+        else
+        {
+            StatusMessage = "Resultado do Playground será gravado em evals/ no próximo Salvar.";
+        }
     }
 
     // ------------------------------------------------------------------ validação e prévia
@@ -284,7 +338,7 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
     public void Revalidate()
     {
         var draft = BuildDraft();
-        var report = _validator.Validate(draft, _context);
+        var report = _validator.Validate(draft, EvalContext(draft.Name));
         Issues.Clear();
         foreach (var i in report.Issues) Issues.Add(new IssueViewModel(i));
         ErrorCount = report.ErrorCount;
@@ -297,6 +351,7 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
         PreviewSkillMd = SkillSerializer.RenderSkillMd(draft);
         PreviewOpenAiYaml = SkillSerializer.RenderOpenAiYaml(draft);
         IsDirty = _savedSnapshot.Length > 0 && Snapshot() != _savedSnapshot;
+        Playground.Refresh(draft, report.ErrorCount);
 
         var query = $"{Name.Replace('-', ' ')} {Description}";
         if (query != _lastSimilarQuery)
@@ -317,6 +372,7 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
             SkillField.Files => TabFiles,
             SkillField.Metadata or SkillField.License or SkillField.Compatibility => TabMetadata,
             SkillField.Package => TabPreview,
+            SkillField.Tests => TabPlayground,
             _ => TabIdentity,
         };
         if (issue.Issue.Field == SkillField.Files && issue.Issue.FilePath is { } path)
@@ -326,6 +382,9 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
     // ------------------------------------------------------------------ comandos do editor
 
     public Func<string, string, Task<bool>>? ConfirmAsync { get; set; }
+
+    /// <summary>Confirmação genérica (título, mensagem, texto do botão principal).</summary>
+    public Func<string, string, string, Task<bool>>? ConfirmActionAsync { get; set; }
 
     private async Task<bool> ConfirmDiscardAsync()
     {
@@ -420,12 +479,19 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
         {
             var draft = BuildDraft();
             var result = _repo.Save(draft);
+            var testsChanged = false;
+            if (_evalStore is not null)
+            {
+                testsChanged = _evalStore.SaveSuite(Playground.ToSuite(draft.Name));
+                if (Playground.LastReport is { } lastRun) _evalStore.SaveLastRun(draft.Name, lastRun);
+            }
             RefreshSkills();
             LoadDraft(_repo.Load(draft.Name), draft.Name);
             SelectedSkill = Skills.FirstOrDefault(s => s.Name == draft.Name);
+            var tests = testsChanged ? $" Casos de teste em evals/{draft.Name}/." : "";
             StatusMessage = result.Written.Count + result.Deleted.Count == 0
-                ? "Nada mudou no disco."
-                : $"Salvo em agents/{draft.Name}/ · {result.Written.Count} arquivo(s) gravado(s){(result.Deleted.Count > 0 ? $", {result.Deleted.Count} removido(s)" : "")}. Rode \"Verificar repositório\" antes do commit.";
+                ? (testsChanged ? $"Skill sem mudanças.{tests}" : "Nada mudou no disco.")
+                : $"Salvo em agents/{draft.Name}/ · {result.Written.Count} arquivo(s) gravado(s){(result.Deleted.Count > 0 ? $", {result.Deleted.Count} removido(s)" : "")}.{tests} Rode \"Verificar repositório\" antes do commit.";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
@@ -555,7 +621,7 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
             Author = _settings.Author,
         };
         var repo = _repo;
-        _assistant = new SkillAssistant(options, new AssistantTools(repo, () => _index, this), Skills.Count);
+        _assistant = new SkillAssistant(options, new AssistantTools(repo, () => _index, this, this), Skills.Count);
         _assistant.EventRaised += OnAssistantEvent;
         return _assistant;
     }
@@ -590,6 +656,8 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
     private Task ReviewWithAssistant() => SendToAssistant(
         "Revise o rascunho atual (get_current_draft): corrija os erros de validação, melhore a description e aponte lacunas no corpo. Faça as correções com update_draft e me diga o que mudou.",
         "Revisar o rascunho atual");
+
+    public Task AskAssistant(string prompt, string shown) => SendToAssistant(prompt, shown);
 
     private async Task SendToAssistant(string prompt, string shown)
     {
@@ -688,7 +756,18 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost
         return BuildDraft();
     });
 
-    ValidationReport IDraftHost.Validate(SkillDraft draft) => _validator.Validate(draft, _context);
+    ValidationReport IDraftHost.Validate(SkillDraft draft) => OnUi(() => _validator.Validate(draft, EvalContext(draft.Name)));
+
+    // ------------------------------------------------------------------ IEvalHost
+
+    EvalSuite IEvalHost.GetSuite() => OnUi(() => Playground.ToSuite(Name.Trim()));
+
+    EvalSuite IEvalHost.ApplyCases(IReadOnlyList<EvalCase> upserts, IReadOnlyList<string> removeIds) => OnUi(() =>
+    {
+        var suite = Playground.ApplyCases(upserts, removeIds, Name.Trim());
+        Revalidate();
+        return suite;
+    });
 
     private static T OnUi<T>(Func<T> f) =>
         Application.Current.Dispatcher.CheckAccess() ? f() : Application.Current.Dispatcher.Invoke(f);

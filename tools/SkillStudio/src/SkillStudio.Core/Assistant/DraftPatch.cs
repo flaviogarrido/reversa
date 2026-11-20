@@ -78,3 +78,12 @@ public interface IDraftHost
 
     ValidationReport Validate(SkillDraft draft);
 }
+
+/// <summary>Ponte entre o assistente e o Playground (casos de teste da skill aberta).</summary>
+public interface IEvalHost
+{
+    Evals.EvalSuite GetSuite();
+
+    /// <summary>Aplica as mudanças nos casos (sem gravar em disco) e devolve a suíte resultante.</summary>
+    Evals.EvalSuite ApplyCases(IReadOnlyList<Evals.EvalCase> upserts, IReadOnlyList<string> removeIds);
+}

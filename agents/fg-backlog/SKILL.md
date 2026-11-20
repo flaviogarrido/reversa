@@ -52,7 +52,7 @@ Ao ser invocado, rode a sincronização, mostre o backlog resumido (posição, I
 ### 1. Adicionar item
 
 1. Extraia da descrição do usuário: título curto, descrição (problema e resultado esperado), **Valor** e **Esforço** (alto, médio ou baixo).
-2. Se faltar Valor ou Esforço, pergunte em uma única mensagem, com as opções. **Não invente** o valor.
+2. Se faltar Valor ou Esforço, pergunte em uma única mensagem, com as opções. **Não invente** o valor. Enquanto faltar dado, nada é gravado: mostre no máximo um rascunho marcado como "ainda não gravado".
 3. Pergunte, de forma opcional, quais specs ou componentes do legado o item afeta. Ofereça candidatos lidos em `_reversa_sdd/` (por exemplo, nomes de componentes em `architecture.md` ou arquivos de spec). Só registre o que o usuário confirmar.
 4. Gere o próximo ID livre (`BL-` + número de três dígitos, `max + 1`). IDs nunca são reutilizados, nem os de itens descartados.
 5. Status inicial: `proposta`.
@@ -64,7 +64,9 @@ Altere título, descrição, Valor, Esforço ou specs afetadas. Mudança de Valo
 
 ### 3. Mudar status manual
 
-Transições permitidas para itens sem pasta: `proposta → pronta`, `pronta → proposta`, qualquer um → `descartada`, `descartada → proposta`. Pedir o motivo é obrigatório para `descartada`, e o motivo vai para o log.
+Transições permitidas para itens sem pasta: `proposta → pronta`, `pronta → proposta`, qualquer um → `descartada`, `descartada → proposta`. Pedir o motivo é obrigatório para `descartada`, e o motivo vai para o log. Sem o motivo, não grave nada: peça-o e espere a resposta.
+
+Descartar não apaga o item: ele muda de seção, da tabela ativa para a seção **Descartados**, com data e motivo, e continua registrado no arquivo. Descreva a operação como "mover para Descartados", nunca como "remover" ou "excluir".
 
 ### 4. Reordenar manualmente
 
@@ -119,11 +121,15 @@ Quando o usuário quiser levar itens para o pipeline:
 
 - Escreva **somente** em `_reversa_sdd/backlog.md` e `_reversa_sdd/backlog-log.md`. Não crie, mova nem apague pastas em `_reversa_forward/`, e não edite `.reversa/active-requirements.json`.
 - Não altere código do projeto nem `.reversa/reversa-config.json`.
-- Não apague itens: descartar é um status, e o item continua no arquivo.
+- Não apague itens: descartar é um status. O item vai para a seção Descartados e continua no arquivo, e o ID nunca é reutilizado.
 - Não invente features, Valor, Esforço nem ligações. Tudo vem do usuário ou é confirmado por ele.
 - Não rode `/reversa-requirements`, `/reversa-forward-autonomous` nem outra skill: só sugira.
 - Não priorize por outro método além do descrito em `references/priorizacao.md`, a não ser pela ordem manual.
 
-Termine sempre com:
+## Encerramento
+
+Use a frase abaixo **somente** quando a operação tiver sido de fato gravada (ou quando nenhuma gravação for necessária, como ao listar o backlog ou preparar a execução):
 
 > Backlog atualizado. Digite **CONTINUAR** para outra operação, ou rode o comando sugerido acima.
+
+Se a operação ficou pendente (falta Esforço, Valor, motivo ou confirmação), **não use essa frase**. Termine com a pergunta pendente e a linha "Ainda não gravei nada."
