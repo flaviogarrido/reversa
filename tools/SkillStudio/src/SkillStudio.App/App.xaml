@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:conv="clr-namespace:SkillStudio.App.Converters"
+             xmlns:vm="clr-namespace:SkillStudio.App.ViewModels"
              StartupUri="Views/MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
@@ -31,6 +32,25 @@
                 <Setter Property="Margin" Value="0,4,0,0" />
                 <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
             </Style>
+            <!-- Seletor Editar / Dividir / Visualizar dos editores de Markdown. -->
+            <Style x:Key="ViewModeButton" TargetType="RadioButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+                <Setter Property="Padding" Value="10,4" />
+                <Setter Property="Margin" Value="0,0,4,0" />
+                <Setter Property="FontSize" Value="12" />
+            </Style>
+            <DataTemplate DataType="{x:Type vm:MarkdownViewMode}">
+                <StackPanel Orientation="Horizontal" IsEnabled="{Binding CanPreview}">
+                    <RadioButton Style="{StaticResource ViewModeButton}" IsChecked="{Binding IsEdit}" ToolTip="Só o texto">
+                        <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Edit16" Margin="0,0,4,0" /><TextBlock Text="Editar" /></StackPanel>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource ViewModeButton}" IsChecked="{Binding IsSplit}" ToolTip="Texto e Markdown formatado lado a lado">
+                        <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="SplitVertical20" Margin="0,0,4,0" /><TextBlock Text="Dividir" /></StackPanel>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource ViewModeButton}" IsChecked="{Binding IsPreview}" ToolTip="Só o Markdown formatado">
+                        <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Eye16" Margin="0,0,4,0" /><TextBlock Text="Visualizar" /></StackPanel>
+                    </RadioButton>
+                </StackPanel>
+            </DataTemplate>
             <Style x:Key="Pill" TargetType="Border">
                 <Setter Property="CornerRadius" Value="8" />
                 <Setter Property="Padding" Value="6,1" />

@@ -148,6 +148,25 @@ public sealed partial class MainViewModel : ObservableObject, IDraftHost, IEvalH
 
     public ObservableCollection<FileItemViewModel> Files { get; } = [];
 
+    /// <summary>Editar, dividir ou visualizar o Markdown das instruções.</summary>
+    public MarkdownViewMode BodyView { get; } = new();
+
+    /// <summary>Mesmo controle para o arquivo de referência selecionado (só Markdown tem visualização).</summary>
+    public MarkdownViewMode FileView { get; } = new();
+
+    partial void OnSelectedFileChanged(FileItemViewModel? oldValue, FileItemViewModel? newValue)
+    {
+        if (oldValue is not null) oldValue.PropertyChanged -= OnSelectedFilePathChanged;
+        if (newValue is not null) newValue.PropertyChanged += OnSelectedFilePathChanged;
+        FileView.CanPreview = newValue?.CanPreview ?? false;
+    }
+
+    private void OnSelectedFilePathChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(FileItemViewModel.RelativePath) && sender is FileItemViewModel f)
+            FileView.CanPreview = f.CanPreview;
+    }
+
     public IReadOnlyList<string> TeamSuggestions { get; } = MetadataRules.KnownTeams;
     public IReadOnlyList<string> PhaseSuggestions { get; } =
         ["reconhecimento", "escavacao", "interpretacao", "geracao", "revisao", "forward", "maintenance", "pricing", "traducao", "qualquer"];

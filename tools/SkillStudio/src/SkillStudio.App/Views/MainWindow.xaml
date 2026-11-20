@@ -7,6 +7,7 @@
                  xmlns:ae="http://icsharpcode.net/sharpdevelop/avalonedit"
                  xmlns:b="clr-namespace:SkillStudio.App.Behaviors"
                  xmlns:vm="clr-namespace:SkillStudio.App.ViewModels"
+                 xmlns:views="clr-namespace:SkillStudio.App.Views"
                  mc:Ignorable="d"
                  d:DataContext="{d:DesignInstance vm:MainViewModel}"
                  Title="Reversa Skill Studio"
@@ -223,13 +224,21 @@
                             <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Hint}">
                                 <Run Text="{Binding BodyLineCount, Mode=OneWay}" /><Run Text=" linhas (recomendado até 500). Markdown sem frontmatter: o editor gera o cabeçalho. Cite arquivos auxiliares pelo caminho exato, ex.: references/checklist.md." />
                             </TextBlock>
-                            <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
-                                <ae:TextEditor x:Name="BodyEditor" FontFamily="Cascadia Mono, Consolas" FontSize="13" ShowLineNumbers="True"
-                                               WordWrap="True" Padding="6" Background="Transparent"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                               b:AvalonEditBinding.Syntax="MarkDown"
-                                               b:AvalonEditBinding.Text="{Binding Body, Mode=TwoWay}" />
-                            </Border>
+                            <ContentControl DockPanel.Dock="Top" Margin="0,0,0,8" HorizontalAlignment="Left" Content="{Binding BodyView}" Focusable="False" />
+                            <UniformGrid Rows="1">
+                                <Border Margin="0,0,4,0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6"
+                                        Visibility="{Binding BodyView.ShowEditor, Converter={StaticResource BoolToVisibility}}">
+                                    <ae:TextEditor x:Name="BodyEditor" FontFamily="Cascadia Mono, Consolas" FontSize="13" ShowLineNumbers="True"
+                                                   WordWrap="True" Padding="6" Background="Transparent"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   b:AvalonEditBinding.Syntax="MarkDown"
+                                                   b:AvalonEditBinding.Text="{Binding Body, Mode=TwoWay}" />
+                                </Border>
+                                <Border Margin="4,0,0,0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="1"
+                                        Visibility="{Binding BodyView.ShowPreview, Converter={StaticResource BoolToVisibility}}">
+                                    <views:MarkdownPreview Markdown="{Binding Body, Mode=OneWay}" />
+                                </Border>
+                            </UniformGrid>
                         </DockPanel>
                     </TabItem>
 
@@ -268,13 +277,22 @@
                                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource Hint}" Margin="0,0,0,6"
                                            Visibility="{Binding IsBinary, Converter={StaticResource BoolToVisibility}}"
                                            Text="Arquivo binário: o editor preserva sem alterar." />
-                                <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6">
-                                    <ae:TextEditor FontFamily="Cascadia Mono, Consolas" FontSize="13" ShowLineNumbers="True" WordWrap="True" Padding="6"
-                                                   Background="Transparent" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                   IsReadOnly="{Binding IsBinary}"
-                                                   b:AvalonEditBinding.Syntax="MarkDown"
-                                                   b:AvalonEditBinding.Text="{Binding Content, Mode=TwoWay}" />
-                                </Border>
+                                <ContentControl DockPanel.Dock="Top" Margin="0,0,0,8" HorizontalAlignment="Left" Focusable="False"
+                                                Content="{Binding DataContext.FileView, RelativeSource={RelativeSource AncestorType=TabItem}}" />
+                                <UniformGrid Rows="1">
+                                    <Border Margin="0,0,4,0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6"
+                                            Visibility="{Binding DataContext.FileView.ShowEditor, RelativeSource={RelativeSource AncestorType=TabItem}, Converter={StaticResource BoolToVisibility}}">
+                                        <ae:TextEditor FontFamily="Cascadia Mono, Consolas" FontSize="13" ShowLineNumbers="True" WordWrap="True" Padding="6"
+                                                       Background="Transparent" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                       IsReadOnly="{Binding IsBinary}"
+                                                       b:AvalonEditBinding.Syntax="MarkDown"
+                                                       b:AvalonEditBinding.Text="{Binding Content, Mode=TwoWay}" />
+                                    </Border>
+                                    <Border Margin="4,0,0,0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Padding="1"
+                                            Visibility="{Binding DataContext.FileView.ShowPreview, RelativeSource={RelativeSource AncestorType=TabItem}, Converter={StaticResource BoolToVisibility}}">
+                                        <views:MarkdownPreview Markdown="{Binding Content, Mode=OneWay}" />
+                                    </Border>
+                                </UniformGrid>
                             </DockPanel>
                         </Grid>
                     </TabItem>

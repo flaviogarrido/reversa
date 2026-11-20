@@ -8,6 +8,7 @@ O app fica fora do pacote npm: o `package.json` só publica `agents/`, `bin/`, `
 
 - Windows 10 ou 11 com o SDK do .NET 10
 - Python 3 e Node 18+ no PATH, só para o botão **Verificar repositório**
+- Microsoft Edge WebView2 Runtime, só para a visualização do Markdown (já vem no Windows 11)
 - Uma credencial da API do Claude, só para o assistente (veja [Assistente](#assistente-claude))
 
 ## Como rodar
@@ -32,8 +33,8 @@ dotnet run --project tools/SkillStudio/src/SkillStudio.App -- fg-minha-skill 1
 |---|---|
 | **Skills** (esquerda) | Todas as pastas de `agents/`, com filtro e as marcas user/model, upstream/fork e time. Duplo clique abre a skill. Com o botão direito, **Usar como modelo** copia a estrutura de uma skill para uma nova. |
 | **Identidade** | Nome, modo de invocação, description com contador, `display_name` e `short_description` gerados automaticamente no padrão do repositório, e as skills mais parecidas (TF-IDF local, atualizada enquanto você digita). |
-| **Instruções** | Corpo do SKILL.md num editor Markdown com numeração de linhas. |
-| **Referências** | Arquivos de `references/`, `scripts/` e `assets/`. Binários são preservados sem edição. |
+| **Instruções** | Corpo do SKILL.md num editor Markdown com numeração de linhas. **Editar**, **Dividir** e **Visualizar** alternam entre o texto, o texto ao lado do Markdown formatado e só o formatado. |
+| **Referências** | Arquivos de `references/`, `scripts/` e `assets/`. Binários são preservados sem edição. Arquivos `.md` têm os mesmos modos de visualização das Instruções. |
 | **Metadados** | Autor, versão, framework, licença, compatibilidade, time, fase, papel e etapa. |
 | **Arquivos gerados** | O SKILL.md e o `agents/openai.yaml` exatamente como serão gravados, mais o resultado da verificação do repositório. |
 | **Playground** | Casos de teste da skill, execução contra o Claude e o placar de confiança. Veja [Playground](#playground). |
