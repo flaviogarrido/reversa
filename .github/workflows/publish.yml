@@ -5,8 +5,13 @@ name: Publish to npm
 # (OIDC do GitHub Actions, configurado no pacote em npmjs.com; exige npm >= 11.5.1).
 # O segredo NPM_TOKEN é só um fallback temporário: apague-o junto com o token no npm.
 #
-#   npm version patch        # sobe a versão e cria a tag
-#   git push --follow-tags   # dispara este workflow
+#   npm version patch          # sobe a versão e cria a tag
+#   git push                   # envia o commit
+#   git push origin vX.Y.Z     # envia só a tag e dispara este workflow
+#
+# Não use --follow-tags: ele leva junto as tags do upstream que faltam no fork, e o GitHub
+# não dispara workflows num push com mais de 3 tags. Tag enviada sem execução:
+#   gh workflow run publish.yml --repo flaviogarrido/reversa --ref vX.Y.Z
 
 on:
   push:
