@@ -28,6 +28,7 @@ O Reversa é um time de especialistas. Cada agente faz uma coisa só — e faz b
 | Clarear a ideia antes de qualquer código | `/reversa-brainstorm` | Ideation Agents |
 | Criar um projeto novo a partir de uma ideia | `/reversa-new` | Code New Project Agents |
 | Implementar ou evoluir código a partir das specs | `/reversa-forward` | Code Forward Agents |
+| Registrar e priorizar ideias de feature antes do ciclo forward | `/fg-backlog` | Agentes do fork |
 | Planejar a migração de um legado | `/reversa-migrate` | Migration Agents |
 | Gerar um mini-site visual da documentação | `/reversa-docs` | Documentation Agents |
 | Descobrir como vender e quanto cobrar pelo software ou por uma feature | `/reversa-pricing` | Pricing and Size Agents |
@@ -194,6 +195,15 @@ Um diretor de arte premiado não aceita o template que todo mundo usa. Ele olha 
 
 ---
 
+## 📋 Backlog: o gerente de produto com a planilha
+**Comando:** `/fg-backlog`
+
+O gerente de produto não escreve código nem decide a arquitetura. Ele anota o que os clientes pedem, dá uma nota de valor e de esforço a cada pedido, mantém a fila em ordem e, quando chega a hora, entrega ao time os primeiros da fila. A planilha dele nunca perde uma linha: o que foi descartado fica registrado, com o motivo.
+
+> Use o Backlog quando surgir uma ideia de feature e você quiser registrá-la antes de abrir o ciclo forward, ou para decidir o que entra no próximo `/reversa-forward-autonomous`. Ele prioriza por Valor × Esforço, acompanha o estágio das pastas em `_reversa_forward/` e só sugere o próximo comando, sem executá-lo. É uma skill do fork `@flaviogarrido/reversa`.
+
+---
+
 ## Sequência recomendada
 
 ```
@@ -202,6 +212,7 @@ Projeto novo:   /reversa-new → PRD e specs → /reversa-forward
 Migração:       /reversa → /reversa-migrate → /reversa-forward
 Precificar:     /reversa-pricing → advisor → profile → product | size → estimate
 Front-end:      /impeccable init → /impeccable <comando> <alvo>
+Backlog:        /fg-backlog → /reversa-requirements | /reversa-forward-autonomous → /fg-backlog
 
 Pipeline legado manual:
 Scout → Archaeologist (N sessões) → Detective → Architect → Writer → Reviewer
