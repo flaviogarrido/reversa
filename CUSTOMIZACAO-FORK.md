@@ -123,7 +123,8 @@ npx @flaviogarrido/reversa update
   - consulta o `latest` do **próprio** pacote no npm;
   - grava no projeto a versão do pacote **em execução**, mesmo offline (antes gravava a do npm, e offline não gravava nada);
   - registra a origem em `.reversa/state.json` (`"package"`). Um projeto instalado pelo `reversa` original é sempre atualizado pelo fork, mesmo que a versão instalada pareça maior ou igual, porque as numerações não são comparáveis;
-  - compara pastas de skill com a `/` final. Antes, editar `reversa-docs/` bloqueava a atualização de `reversa/`.
+  - compara pastas de skill com a `/` final, por `isInsideDir()` em `lib/installer/manifest.js`. Antes, editar `reversa-docs/` bloqueava a atualização de `reversa/`.
+- `lib/commands/install.js` e `lib/installer/writer.js`: a instalação já grava a origem (`"package"`) em `.reversa/state.json`, junto com a versão instalada.
 - `scripts/test-fork-delivery.mjs`: testa tudo isso num projeto temporário que simula uma instalação do upstream. Faz parte do `npm run verify`.
 
 ### Migrar um projeto que usa o Reversa original
@@ -208,7 +209,7 @@ Se as suas skills ficarem em pastas `fg-*` e você mexer pouco em `lib/`, os con
 
 - **Workflows agendados em forks** ficam desativados até você ativá-los na aba *Actions* do GitHub. Isso vale para `sync-impeccable.yml`, que atualiza o Impeccable diariamente e abre PR.
 - **Sincronização automática:** dá para criar um workflow parecido com `sync-impeccable.yml` que, num `schedule`, faz `git fetch upstream` e abre PR com `peter-evans/create-pull-request` quando houver commits novos em `upstream/main`.
-- **Mudanças em `lib/`** (como as correções dos bugs de `update`/`uninstall`) podem virar PR para o upstream. Quanto menos o fork divergir em `lib/`, mais barata fica a sincronização.
+- **Mudanças em `lib/`** (como a correção do bug do `update`) podem virar PR para o upstream. Quanto menos o fork divergir em `lib/`, mais barata fica a sincronização.
 
 ---
 

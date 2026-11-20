@@ -123,7 +123,7 @@ O site do Reversa (`docs/`, publicado com MkDocs) tem uma página por agente em 
 
 O botão **Documentar** do assistente resolve isso:
 
-1. O assistente lê a skill aberta e uma página existente como modelo (`get_docs_pages`). A skill precisa estar salva, porque a página usa o nome da pasta.
+1. O assistente lê a skill aberta e uma página existente como modelo (`get_docs_pages`). A skill precisa estar salva, porque a página usa o nome da pasta, e ser do fork: as skills do upstream já têm páginas com nomes próprios (`scout.md` para `reversa-scout`).
 2. Escreve a página nos três idiomas, no formato das outras: comando e fase, uma analogia, o que faz, o que produz e quando usar. O conteúdo vem só do corpo e das referências da skill.
 3. Grava com `update_docs_pages`. Na primeira vez, também registra a página no menu do `mkdocs.yml` (grupo **Fork Agents**, com as traduções) e acrescenta uma linha na tabela "Agentes do fork" do índice de agentes, nos idiomas em que essa seção existe.
 
@@ -135,8 +135,8 @@ A suíte de testes confere que toda skill `fg-*` do repositório tem a página c
 
 ```
 tools/SkillStudio/
-├── src/SkillStudio.Core/      # net10.0, sem UI: modelo, serialização, regras, busca, assistente
-├── src/SkillStudio.App/       # net10.0-windows, WPF + WPF-UI (Fluent), AvalonEdit, MVVM Toolkit
+├── src/SkillStudio.Core/      # net10.0, sem UI: modelo, serialização, regras, busca, assistente, Playground, documentação e Markdown (Markdig)
+├── src/SkillStudio.App/       # net10.0-windows, WPF + WPF-UI (Fluent), AvalonEdit, MVVM Toolkit, WebView2
 └── tests/SkillStudio.Tests/   # xUnit
 ```
 
@@ -155,9 +155,11 @@ A suíte cobre:
 - Gravação em disco: LF, sem BOM, binários preservados e bloqueio de caminho fora da pasta.
 - O formato de fio do assistente.
 - O Playground com um modelo falso: gatilho, asserções, linha de base, instabilidade, execução parcial, placar de confiança, persistência em `evals/` e as ferramentas de casos do assistente.
-- Regressão contra todas as skills do repositório: nenhuma pode ter erro, e a maioria é regravada byte a byte.
+- A página de documentação: gravação nos três idiomas, registro único no `mkdocs.yml` e no índice, proteção de páginas existentes e recusa para skills não salvas ou do upstream.
+- A visualização do Markdown: HTML cru escapado, sem scripts nem conteúdo remoto, e frontmatter oculto.
+- Regressão contra todas as skills do repositório: nenhuma pode ter erro, a maioria é regravada byte a byte, e toda skill `fg-*` tem a página completa no site.
 
-O workflow [.github/workflows/skill-studio.yml](../../.github/workflows/skill-studio.yml) roda essa suíte a cada mudança em `agents/**`, `evals/**`, `docs/agentes/**` ou `mkdocs.yml`. Uma skill com erro reprova o CI mesmo que tenha sido editada fora do app.
+O workflow [.github/workflows/skill-studio.yml](../../.github/workflows/skill-studio.yml) roda essa suíte a cada mudança em `agents/**`, `evals/**`, `docs/agentes/**`, `mkdocs.yml` ou no próprio `tools/SkillStudio/**`. Uma skill com erro reprova o CI mesmo que tenha sido editada fora do app.
 
 Existe também um teste de ponta a ponta contra a API real. Ele só roda se você pedir, porque consome tokens:
 
