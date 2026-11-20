@@ -142,8 +142,10 @@ A publicação é feita pelo workflow `.github/workflows/publish.yml`, disparado
 **Configuração (uma vez só):**
 
 1. No npmjs.com, crie a conta ou organização dona do escopo `@flaviogarrido`.
-2. Faça a primeira publicação com um token granular (*Read and write*, com *Bypass 2FA*) guardado no segredo `NPM_TOKEN` do fork, em *Settings → Secrets and variables → Actions*.
-3. Com o pacote já no npm, configure em *pacote → Settings → Trusted Publisher* o GitHub Actions com o repositório `flaviogarrido/reversa` e o workflow `publish.yml`. A partir daí o workflow autentica por OIDC (npm ≥ 11.5.1, garantido no próprio workflow), e o token e o segredo `NPM_TOKEN` podem ser apagados.
+2. O Trusted Publisher só pode ser configurado num pacote que já existe. Se o pacote ainda não estiver no npm, faça a primeira publicação da sua máquina, com `npm publish --access public`.
+3. Em *pacote → Settings → Trusted Publisher*, configure o GitHub Actions com o repositório `flaviogarrido/reversa` e o workflow `publish.yml`, com o campo Environment vazio. Em *Allowed actions*, marque **Allow npm publish**. Sem essa opção o trusted publisher só faz `npm stage publish`, e o workflow falha com `ENEEDAUTH`.
+
+O workflow autentica só por OIDC (npm ≥ 11.5.1, garantido no próprio workflow). Não há token nem segredo de npm no repositório.
 
 **A cada release:**
 
@@ -170,7 +172,7 @@ gh workflow run publish.yml --repo flaviogarrido/reversa --ref v1.3.9
 ### Alternativa: instalar direto do GitHub (sem npm)
 
 ```bash
-npx github:flaviogarrido/reversa#v1.3.8 install
+npx github:flaviogarrido/reversa#v1.3.9 install
 ```
 
 Fixe uma tag (`#vX.Y.Z`) para ter builds reproduzíveis. Nesse modo o `update` não encontra o pacote no npm, segue offline e instala a versão da tag usada.
@@ -217,6 +219,6 @@ Se as suas skills ficarem em pastas `fg-*` e você mexer pouco em `lib/`, os con
 - [ ] Instalação testada num projeto descartável
 - [ ] `npm pack --dry-run` lista a skill
 - [x] `package.json` com nome com escopo e `update.js` usando o nome do pacote
-- [ ] Trusted Publisher configurado no pacote do npm (ou, só na primeira publicação, o segredo `NPM_TOKEN`)
+- [x] Trusted Publisher configurado no pacote do npm, com *Allow npm publish*
 - [ ] `npm version patch`, `git push` e `git push origin vX.Y.Z` (o workflow publica)
 - [ ] Remoto `upstream` configurado e sincronizado periodicamente

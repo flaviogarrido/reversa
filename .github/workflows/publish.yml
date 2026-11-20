@@ -2,8 +2,8 @@ name: Publish to npm
 
 # Publica o fork no npm (@flaviogarrido/reversa) quando uma tag vX.Y.Z é enviada.
 # Antes de publicar, roda os mesmos gates do CI. Autentica por Trusted Publishing
-# (OIDC do GitHub Actions, configurado no pacote em npmjs.com; exige npm >= 11.5.1).
-# O segredo NPM_TOKEN é só um fallback temporário: apague-o junto com o token no npm.
+# (OIDC do GitHub Actions, configurado no pacote em npmjs.com com "Allow npm publish";
+# exige npm >= 11.5.1). Não há token nem segredo de npm no repositório.
 #
 #   npm version patch          # sobe a versão e cria a tag
 #   git push                   # envia o commit
@@ -76,6 +76,3 @@ jobs:
 
       - name: Publicar
         run: npm publish --provenance --access public
-        env:
-          # Fallback até o token ser apagado; com Trusted Publishing o npm usa OIDC primeiro.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
