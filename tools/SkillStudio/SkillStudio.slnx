@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SkillStudio.App/SkillStudio.App.csproj" />
+    <Project Path="src/SkillStudio.Core/SkillStudio.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SkillStudio.Tests/SkillStudio.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,28 @@
+name: Skill Studio
+
+# Valida todas as skills de agents/ com as regras do Skill Studio (tools/SkillStudio) e roda
+# os testes do editor. Complementa o verify-invocation.yml: aqui entram nome, description,
+# referências citadas, segredos, YAML de ida e volta, entre outras (catálogo em RuleCatalog.cs).
+
+on:
+  push:
+    paths:
+      - 'agents/**'
+      - 'tools/SkillStudio/**'
+      - '.github/workflows/skill-studio.yml'
+  pull_request:
+    paths:
+      - 'agents/**'
+      - 'tools/SkillStudio/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Validar skills e testar o Skill Studio
+        run: dotnet test tools/SkillStudio/tests/SkillStudio.Tests --logger "console;verbosity=normal"
