@@ -152,15 +152,25 @@ npm version patch
 ```
 
 ```bash
-git push --follow-tags
+git push
 ```
 
-O `npm version` sobe a versão, faz o commit e cria a tag `vX.Y.Z`. O push da tag dispara a publicação.
+```bash
+git push origin v1.3.9
+```
+
+O `npm version` sobe a versão, faz o commit e cria a tag `vX.Y.Z` (troque `v1.3.9` pela versão que ele mostrou). O push da tag dispara a publicação.
+
+Envie a tag sozinha, não com `git push --follow-tags`. O `--follow-tags` também leva as tags anotadas do upstream que ainda não estão no fork, e o GitHub não dispara workflows quando um push leva mais de 3 tags de uma vez. Foi o que travou a 1.3.8. Se uma tag chegou ao GitHub e a publicação não rodou, dispare-a à mão:
+
+```bash
+gh workflow run publish.yml --repo flaviogarrido/reversa --ref v1.3.9
+```
 
 ### Alternativa: instalar direto do GitHub (sem npm)
 
 ```bash
-npx github:flaviogarrido/reversa#v1.3.7 install
+npx github:flaviogarrido/reversa#v1.3.8 install
 ```
 
 Fixe uma tag (`#vX.Y.Z`) para ter builds reproduzíveis. Nesse modo o `update` não encontra o pacote no npm, segue offline e instala a versão da tag usada.
@@ -208,5 +218,5 @@ Se as suas skills ficarem em pastas `fg-*` e você mexer pouco em `lib/`, os con
 - [ ] `npm pack --dry-run` lista a skill
 - [x] `package.json` com nome com escopo e `update.js` usando o nome do pacote
 - [ ] Trusted Publisher configurado no pacote do npm (ou, só na primeira publicação, o segredo `NPM_TOKEN`)
-- [ ] `npm version patch` e `git push --follow-tags` (o workflow publica)
+- [ ] `npm version patch`, `git push` e `git push origin vX.Y.Z` (o workflow publica)
 - [ ] Remoto `upstream` configurado e sincronizado periodicamente
