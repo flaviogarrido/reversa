@@ -33,6 +33,9 @@ public sealed partial class FileItemViewModel : ObservableObject
 
     partial void OnContentChanged(string value) => OnPropertyChanged(nameof(Kind));
 
+    /// <summary>Arquivo de texto em Markdown: o editor oferece a visualização formatada.</summary>
+    public bool CanPreview => !IsBinary && SkillStudio.Core.Preview.MarkdownRenderer.CanPreview(RelativePath);
+
     public SkillFile ToModel() => new() { RelativePath = RelativePath, Content = IsBinary ? null : Content };
 
     public static FileItemViewModel From(SkillFile f) =>
