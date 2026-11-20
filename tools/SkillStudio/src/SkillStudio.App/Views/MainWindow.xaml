@@ -104,6 +104,10 @@
                                         <Border Style="{StaticResource Pill}" Visibility="{Binding Team, Converter={StaticResource BoolToVisibility}}">
                                             <TextBlock FontSize="11" Text="{Binding Team}" />
                                         </Border>
+                                        <Border Style="{StaticResource Pill}" Visibility="{Binding HasTests, Converter={StaticResource BoolToVisibility}}"
+                                                ToolTip="Tem casos de teste em evals/">
+                                            <TextBlock FontSize="11" Text="testes" />
+                                        </Border>
                                     </StackPanel>
                                 </StackPanel>
                             </DataTemplate>
@@ -352,6 +356,260 @@
                                         FontFamily="Cascadia Mono, Consolas" FontSize="12" VerticalContentAlignment="Top"
                                         PlaceholderText="Salve a skill e clique em Verificar repositório."
                                         Text="{Binding VerifyOutput, Mode=OneWay}" />
+                        </Grid>
+                    </TabItem>
+
+                    <!-- Playground -->
+                    <TabItem>
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="BeakerEdit24" Margin="0,0,6,0" /><TextBlock Text="Playground" /></StackPanel>
+                        </TabItem.Header>
+                        <Grid Margin="0,8,0,0" DataContext="{Binding Playground}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Placar de confiança + execução -->
+                            <Border Grid.Row="0" Padding="12" CornerRadius="8" BorderThickness="1"
+                                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <ui:SymbolIcon Symbol="ShieldTask24" FontSize="22" Margin="0,0,8,0"
+                                                           Foreground="{Binding ConfidenceBrushKey, Converter={StaticResource ResourceKeyToBrush}}" />
+                                            <TextBlock FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       Foreground="{Binding ConfidenceBrushKey, Converter={StaticResource ResourceKeyToBrush}}">
+                                                <Run Text="Confiança " /><Run Text="{Binding ConfidenceLabel, Mode=OneWay}" />
+                                            </TextBlock>
+                                            <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{Binding ConfidenceScore, StringFormat={}{0}/100}" />
+                                        </StackPanel>
+                                        <TextBlock Margin="0,6,0,0" FontWeight="SemiBold" Text="{Binding ConfidenceHeadline}" TextWrapping="Wrap" />
+                                        <TextBlock Style="{StaticResource Hint}" Text="{Binding Metrics}" Visibility="{Binding Metrics, Converter={StaticResource BoolToVisibility}}" />
+                                        <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding ConfidenceReasons}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                                        <Run Text="• " /><Run Text="{Binding Mode=OneWay}" />
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" MinWidth="300">
+                                        <StackPanel Orientation="Horizontal">
+                                            <StackPanel>
+                                                <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="Repetições" />
+                                                <ComboBox Width="80" ItemsSource="{Binding RepetitionOptions}" SelectedItem="{Binding Repetitions}" />
+                                            </StackPanel>
+                                            <StackPanel Margin="8,0,0,0">
+                                                <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="Esforço" />
+                                                <ComboBox Width="110" ItemsSource="{Binding EffortOptions}" SelectedItem="{Binding Effort}" />
+                                            </StackPanel>
+                                            <CheckBox Margin="10,14,0,0" Content="Comparar sem a skill" IsChecked="{Binding IncludeBaseline}"
+                                                      ToolTip="Roda os casos de comportamento também sem a skill, para medir o quanto ela acrescenta" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <ui:Button Appearance="Primary" Content="Rodar todos" Icon="{ui:SymbolIcon Play24}" Command="{Binding RunAllCommand}"
+                                                       IsEnabled="{Binding IsRunning, Converter={x:Static vm:Markers.Not}}" />
+                                            <ui:Button Margin="6,0,0,0" Content="Selecionado" Command="{Binding RunSelectedCommand}"
+                                                       IsEnabled="{Binding IsRunning, Converter={x:Static vm:Markers.Not}}" ToolTip="Roda só o caso selecionado" />
+                                            <ui:Button Margin="6,0,0,0" Content="Que falharam" Command="{Binding RunFailedCommand}"
+                                                       IsEnabled="{Binding IsRunning, Converter={x:Static vm:Markers.Not}}" ToolTip="Roda os casos que não passaram ou estão desatualizados" />
+                                        </StackPanel>
+                                        <TextBlock Style="{StaticResource Hint}" Text="{Binding Estimate}" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                            <ui:Button Content="Propor casos" Icon="{ui:SymbolIcon Sparkle24}" Command="{Binding ProposeWithAssistantCommand}"
+                                                       ToolTip="O assistente lê a skill e grava casos de teste no Playground" />
+                                            <ui:Button Margin="6,0,0,0" Content="Analisar falhas" Icon="{ui:SymbolIcon BugArrowCounterclockwise20}" Command="{Binding ExplainFailuresCommand}"
+                                                       ToolTip="Envia as falhas ao assistente para descobrir se o problema está na skill ou no caso" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Progresso -->
+                            <StackPanel Grid.Row="1" Margin="0,8,0,8">
+                                <DockPanel Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
+                                    <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="Cancelar" Command="{Binding CancelRunCommand}" />
+                                    <StackPanel>
+                                        <ProgressBar Height="4" Minimum="0" Maximum="100" Value="{Binding Progress}" />
+                                        <TextBlock FontSize="12" Margin="0,4,0,0" Text="{Binding ProgressText}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </DockPanel>
+                                <TextBlock FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding RunStatus}" Visibility="{Binding RunStatus, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+
+                            <!-- Casos -->
+                            <Grid Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="280" MinWidth="200" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <DockPanel Grid.Column="0">
+                                    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <ui:Button Content="Comportamento" Icon="{ui:SymbolIcon Add24}" Command="{Binding AddBehaviorCaseCommand}"
+                                                   ToolTip="Caso que verifica a resposta com a skill carregada" Margin="0,0,6,6" />
+                                        <ui:Button Content="Gatilho +" Command="{Binding AddTriggerCaseCommand}" CommandParameter="true" Margin="0,0,6,6"
+                                                   ToolTip="Pedido que DEVE acionar a skill (só model-invoked)"
+                                                   IsEnabled="{Binding IsUserInvoked, Converter={x:Static vm:Markers.Not}}" />
+                                        <ui:Button Content="Gatilho −" Command="{Binding AddTriggerCaseCommand}" CommandParameter="false" Margin="0,0,6,6"
+                                                   ToolTip="Pedido parecido que NÃO deve acionar a skill (só model-invoked)"
+                                                   IsEnabled="{Binding IsUserInvoked, Converter={x:Static vm:Markers.Not}}" />
+                                        <ui:Button Icon="{ui:SymbolIcon Copy24}" Command="{Binding DuplicateCaseCommand}" ToolTip="Duplicar caso" Margin="0,0,6,6" />
+                                        <ui:Button Icon="{ui:SymbolIcon Delete24}" Command="{Binding RemoveCaseCommand}" ToolTip="Remover caso" Margin="0,0,6,6" />
+                                    </WrapPanel>
+                                    <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Hint}"
+                                               Text="Casos e resultados ficam em evals/&lt;skill&gt;/ e são gravados com Salvar (Ctrl+S). Não vão para o pacote npm." />
+                                    <ListBox ItemsSource="{Binding Cases}" SelectedItem="{Binding SelectedCase}" BorderThickness="0"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:EvalCaseViewModel}">
+                                                <DockPanel Margin="0,3">
+                                                    <ui:SymbolIcon DockPanel.Dock="Left" VerticalAlignment="Top" Margin="0,1,8,0" Symbol="{Binding StatusSymbol}"
+                                                                   Foreground="{Binding StatusBrushKey, Converter={StaticResource ResourceKeyToBrush}}"
+                                                                   ToolTip="{Binding StatusLabel}" />
+                                                    <TextBlock DockPanel.Dock="Right" VerticalAlignment="Top" FontSize="12" Margin="6,1,0,0"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding ResultSummary}" />
+                                                    <StackPanel>
+                                                        <TextBlock FontWeight="SemiBold" Text="{Binding DisplayTitle}" TextTrimming="CharacterEllipsis" />
+                                                        <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                            <Border Style="{StaticResource Pill}"><TextBlock FontSize="11" Text="{Binding Id}" /></Border>
+                                                            <Border Style="{StaticResource Pill}"><TextBlock FontSize="11" Text="{Binding KindLabel}" /></Border>
+                                                            <Border Style="{StaticResource Pill}"><TextBlock FontSize="11" Text="{Binding StatusLabel}" /></Border>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+
+                                <!-- Editor do caso e resultado -->
+                                <TextBlock Grid.Column="2" Style="{StaticResource Hint}" Margin="4,8,0,0"
+                                           Visibility="{Binding SelectedCase, Converter={StaticResource NullToVisibility}, ConverterParameter=invert, FallbackValue=Visible}"
+                                           Text="Crie um caso à esquerda ou clique em Propor casos para o assistente sugerir. Casos de comportamento verificam a resposta com a skill; casos de gatilho verificam se o modelo escolhe a skill (só model-invoked)." />
+                                <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto"
+                                              Visibility="{Binding SelectedCase, Converter={StaticResource NullToVisibility}}">
+                                    <StackPanel DataContext="{Binding SelectedCase}" Margin="0,0,8,0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="12" />
+                                                <ColumnDefinition Width="170" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Style="{StaticResource SectionLabel}" Margin="0,0,0,6" Text="TÍTULO" />
+                                                <ui:TextBox PlaceholderText="Ex.: caminho feliz com backlog vazio" Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Style="{StaticResource SectionLabel}" Margin="0,0,0,6" Text="TIPO" />
+                                                <ComboBox ItemsSource="{x:Static vm:EvalCaseViewModel.KindOptions}" SelectedItem="{Binding Kind}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate><TextBlock Text="{Binding Converter={StaticResource EnumLabel}}" /></DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <TextBlock Style="{StaticResource SectionLabel}" Text="PEDIDO DO USUÁRIO" />
+                                        <ui:TextBox AcceptsReturn="True" TextWrapping="Wrap" MinHeight="110" MaxHeight="320" VerticalContentAlignment="Top"
+                                                    VerticalScrollBarVisibility="Auto"
+                                                    PlaceholderText="Escreva como o usuário pediria. O teste não lê arquivos: cole aqui o contexto que a skill precisaria."
+                                                    Text="{Binding Prompt, UpdateSourceTrigger=PropertyChanged}" />
+
+                                        <!-- Gatilho -->
+                                        <StackPanel Visibility="{Binding IsTrigger, Converter={StaticResource BoolToVisibility}}">
+                                            <CheckBox Margin="0,12,0,0" Content="Este pedido deve acionar a skill" IsChecked="{Binding ShouldTrigger}" />
+                                            <TextBlock Style="{StaticResource Hint}"
+                                                       Text="O modelo recebe o catálogo das skills model-invoked do repositório (com a description atual desta) e decide qual chamar. Desmarque para casos negativos: pedidos vizinhos que pertencem a outra skill ou a nenhuma." />
+                                        </StackPanel>
+
+                                        <!-- Comportamento -->
+                                        <StackPanel Visibility="{Binding IsBehavior, Converter={StaticResource BoolToVisibility}}">
+                                            <DockPanel Margin="0,14,0,6">
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                                    <ui:Button Content="Rubrica" Icon="{ui:SymbolIcon Add24}" Margin="0,0,6,0"
+                                                               Command="{Binding DataContext.AddAssertionCommand, RelativeSource={RelativeSource AncestorType=TabItem}}" CommandParameter="Rubric" />
+                                                    <ui:Button Content="Contém" Margin="0,0,6,0"
+                                                               Command="{Binding DataContext.AddAssertionCommand, RelativeSource={RelativeSource AncestorType=TabItem}}" CommandParameter="Contains" />
+                                                    <ui:Button Content="Não contém" Margin="0,0,6,0"
+                                                               Command="{Binding DataContext.AddAssertionCommand, RelativeSource={RelativeSource AncestorType=TabItem}}" CommandParameter="NotContains" />
+                                                    <ui:Button Content="Regex"
+                                                               Command="{Binding DataContext.AddAssertionCommand, RelativeSource={RelativeSource AncestorType=TabItem}}" CommandParameter="Regex" />
+                                                </StackPanel>
+                                                <TextBlock Style="{StaticResource SectionLabel}" Margin="0" VerticalAlignment="Center" Text="ASSERÇÕES" />
+                                            </DockPanel>
+                                            <ItemsControl ItemsSource="{Binding Assertions}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type vm:AssertionViewModel}">
+                                                        <DockPanel Margin="0,0,0,6">
+                                                            <ComboBox DockPanel.Dock="Left" Width="140" VerticalAlignment="Top"
+                                                                      ItemsSource="{x:Static vm:AssertionViewModel.KindOptions}" SelectedItem="{Binding Kind}">
+                                                                <ComboBox.ItemTemplate>
+                                                                    <DataTemplate><TextBlock Text="{Binding Converter={StaticResource EnumLabel}}" /></DataTemplate>
+                                                                </ComboBox.ItemTemplate>
+                                                            </ComboBox>
+                                                            <ui:Button DockPanel.Dock="Right" VerticalAlignment="Top" Margin="6,0,0,0" Icon="{ui:SymbolIcon Dismiss24}" ToolTip="Remover asserção"
+                                                                       Command="{Binding DataContext.RemoveAssertionCommand, RelativeSource={RelativeSource AncestorType=TabItem}}"
+                                                                       CommandParameter="{Binding}" />
+                                                            <ui:TextBox Margin="6,0,0,0" AcceptsReturn="True" TextWrapping="Wrap"
+                                                                        PlaceholderText="Rubrica: um critério objetivo. Contém/Regex: o texto ou padrão esperado."
+                                                                        Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" />
+                                                        </DockPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Style="{StaticResource Hint}"
+                                                       Text="Rubricas são julgadas pelo Claude com esforço baixo, só pelo texto da resposta. Um critério por linha, verificável e sem ambiguidade." />
+                                        </StackPanel>
+
+                                        <TextBlock Style="{StaticResource SectionLabel}" Text="O QUE ESTE CASO PROTEGE (opcional)" />
+                                        <ui:TextBox AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
+
+                                        <!-- Resultado -->
+                                        <DockPanel Margin="0,16,0,6">
+                                            <TextBlock DockPanel.Dock="Right" FontWeight="SemiBold"
+                                                       Foreground="{Binding StatusBrushKey, Converter={StaticResource ResourceKeyToBrush}}">
+                                                <Run Text="{Binding StatusLabel, Mode=OneWay}" /><Run Text=" " /><Run Text="{Binding ResultSummary, Mode=OneWay}" />
+                                            </TextBlock>
+                                            <TextBlock Style="{StaticResource SectionLabel}" Margin="0" Text="ÚLTIMA EXECUÇÃO" />
+                                        </DockPanel>
+                                        <TextBlock Style="{StaticResource Hint}" Text="Ainda não rodou."
+                                                   Visibility="{Binding Runs.Count, Converter={StaticResource InverseBoolToVisibility}}" />
+                                        <ItemsControl ItemsSource="{Binding Runs}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:RunViewModel}">
+                                                    <Expander Margin="0,0,0,6">
+                                                        <Expander.Header>
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <ui:SymbolIcon Symbol="{Binding Symbol}" Margin="0,0,8,0" />
+                                                                <TextBlock FontWeight="SemiBold" Text="{Binding Header}" />
+                                                                <TextBlock Margin="8,0,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding Verdict}" />
+                                                            </StackPanel>
+                                                        </Expander.Header>
+                                                        <StackPanel>
+                                                            <TextBlock FontFamily="Cascadia Mono, Consolas" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
+                                                                       Text="{Binding Checks}" Visibility="{Binding HasChecks, Converter={StaticResource BoolToVisibility}}" />
+                                                            <TextBox IsReadOnly="True" TextWrapping="Wrap" MaxHeight="360" VerticalScrollBarVisibility="Auto"
+                                                                     FontFamily="Cascadia Mono, Consolas" FontSize="12" Text="{Binding Output, Mode=OneWay}" />
+                                                        </StackPanel>
+                                                    </Expander>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
                         </Grid>
                     </TabItem>
 

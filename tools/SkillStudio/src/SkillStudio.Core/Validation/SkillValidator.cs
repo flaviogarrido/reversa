@@ -21,6 +21,7 @@ public sealed class SkillValidator
         new FileRules(),
         new SecurityRules(),
         new PackageRules(),
+        new EvalRules(),
     ];
 
     public ValidationReport Validate(SkillDraft draft, ValidationContext? context = null)

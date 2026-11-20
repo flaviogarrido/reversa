@@ -5,9 +5,10 @@ using Wpf.Ui.Controls;
 
 namespace SkillStudio.App.ViewModels;
 
-public sealed class SkillListItem(SkillSummary summary)
+public sealed class SkillListItem(SkillSummary summary, bool hasTests = false)
 {
     public SkillSummary Summary { get; } = summary;
+    public bool HasTests { get; } = hasTests;
     public string Name => Summary.Name;
     public string Description => Summary.Description;
     public bool IsUserInvoked => Summary.IsUserInvoked;
@@ -79,6 +80,7 @@ public sealed class IssueViewModel(ValidationIssue issue)
         SkillField.Metadata => "Metadata",
         SkillField.Body => "Instruções",
         SkillField.Files => Issue.FilePath ?? "Referências",
+        SkillField.Tests => "Testes",
         _ => "Pacote",
     };
 }

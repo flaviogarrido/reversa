@@ -18,7 +18,7 @@ public enum Severity
 public enum SkillField
 {
     Name, Description, Invocation, DisplayName, ShortDescription, License, Compatibility,
-    Metadata, Body, Files, Package,
+    Metadata, Body, Files, Package, Tests,
 }
 
 public sealed record ValidationIssue(
@@ -50,6 +50,22 @@ public sealed class ValidationContext
 
     /// <summary>Prefixo do upstream que skills customizadas devem evitar.</summary>
     public string UpstreamPrefix { get; init; } = "reversa";
+
+    /// <summary>Casos de teste da skill (Playground). Nulo desliga as regras RS1xx.</summary>
+    public Evals.EvalSuite? Evals { get; init; }
+
+    /// <summary>Última execução do Playground, para avisar de falhas e resultados desatualizados.</summary>
+    public Evals.EvalReport? LastEvalRun { get; init; }
+
+    public ValidationContext WithEvals(Evals.EvalSuite? suite, Evals.EvalReport? lastRun) => new()
+    {
+        ExistingSkillNames = ExistingSkillNames,
+        PreferredPrefix = PreferredPrefix,
+        RepoSkillFilePaths = RepoSkillFilePaths,
+        UpstreamPrefix = UpstreamPrefix,
+        Evals = suite,
+        LastEvalRun = lastRun,
+    };
 
     public static ValidationContext Empty { get; } = new();
 }

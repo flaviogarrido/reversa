@@ -16,6 +16,8 @@
             <conv:BoolToVisibilityConverter x:Key="BoolToVisibility" />
             <conv:BoolToVisibilityConverter x:Key="InverseBoolToVisibility" Invert="True" />
             <conv:NullToVisibilityConverter x:Key="NullToVisibility" />
+            <conv:ResourceKeyToBrushConverter x:Key="ResourceKeyToBrush" />
+            <conv:EnumLabelConverter x:Key="EnumLabel" />
 
             <Style x:Key="SectionLabel" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="12" />

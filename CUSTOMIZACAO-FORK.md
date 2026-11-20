@@ -8,7 +8,7 @@ Guia para incluir skills próprias neste fork (`flaviogarrido/reversa`), testar,
 
 ## 1. Como criar uma skill
 
-> **Atalho:** o [Skill Studio](tools/SkillStudio/README.md) (app WPF em `tools/SkillStudio/`) faz tudo desta seção por você. Ele gera os dois arquivos em lockstep, valida as regras abaixo (52 no total) enquanto você escreve, bloqueia o salvamento com erro e traz um assistente com a API do Claude que entrevista você e busca skills parecidas. O workflow `skill-studio.yml` aplica a mesma validação no CI.
+> **Atalho:** o [Skill Studio](tools/SkillStudio/README.md) (app WPF em `tools/SkillStudio/`) faz tudo desta seção por você. Ele gera os dois arquivos em lockstep, valida as regras abaixo (61 no total) enquanto você escreve, bloqueia o salvamento com erro e traz um assistente com a API do Claude que entrevista você e busca skills parecidas. A aba **Playground** roda casos de teste da skill contra o Claude e mostra um placar de confiança; os casos ficam em `evals/<skill>/`, fora do pacote. O workflow `skill-studio.yml` aplica a mesma validação no CI.
 
 O instalador copia **toda pasta que existir em `agents/`** para o projeto do usuário. Quem faz isso é `listAllAgents()` em `lib/installer/prompts.js`, que lê o diretório inteiro. Não existe registro manual.
 
